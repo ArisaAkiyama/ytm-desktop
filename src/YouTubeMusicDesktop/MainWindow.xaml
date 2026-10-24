@@ -1,0 +1,22 @@
+<Window x:Class="YouTubeMusicDesktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="YouTube Music"
+        Icon="pack://application:,,,/Assets/ytm.ico"
+        Width="1140"
+        Height="620"
+        MinWidth="720"
+        MinHeight="480"
+        WindowStartupLocation="Manual"
+        WindowState="Maximized"
+        Background="#030303"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Grid Background="#030303">
+        <wv2:WebView2 x:Name="MusicWebView"
+                      DefaultBackgroundColor="#030303"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch" />
+    </Grid>
+</Window>

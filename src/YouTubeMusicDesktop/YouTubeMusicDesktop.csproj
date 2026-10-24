@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\ytm.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <AssemblyName>YouTubeMusic</AssemblyName>
+    <RootNamespace>YouTubeMusicDesktop</RootNamespace>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Title>YouTube Music</Title>
+    <Company>YouTube Music Desktop</Company>
+    <Product>YouTube Music Desktop</Product>
+    <Copyright>Copyright © 2026 YouTube Music Desktop</Copyright>
+    <Description>YouTube Music Native Windows Desktop App (Ad-Free + Dynamic Island)</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\ytm.ico" />
+    <EmbeddedResource Include="Scripts\ytm-adblock-engine.js" />
+  </ItemGroup>
+
+</Project>
