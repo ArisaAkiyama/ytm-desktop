@@ -98,7 +98,7 @@
                         VerticalAlignment="Top"
                         Background="#1C1C1E"
                         Cursor="Hand"
-                        ToolTip="Klik untuk membuka jendela YouTube Music"
+                        ToolTip="Click to open YouTube Music"
                         MouseLeftButtonUp="OnAlbumArtClick">
                     <Border.Clip>
                         <RectangleGeometry x:Name="SharedAlbumArtClip"
@@ -243,7 +243,7 @@
                             <Button Style="{StaticResource IosControlBtnStyle}"
                                     Padding="11,7"
                                     Margin="8,0"
-                                    ToolTip="Lagu Sebelumnya"
+                                    ToolTip="Previous Track"
                                     Click="OnPreviousClick">
                                 <Path Data="M 2,2 L 4,2 L 4,14 L 2,14 Z M 4.5,8 L 14,2 L 14,14 Z"
                                       Fill="#FFFFFF"
@@ -268,7 +268,7 @@
                             <Button Style="{StaticResource IosControlBtnStyle}"
                                     Padding="11,7"
                                     Margin="8,0"
-                                    ToolTip="Lagu Berikutnya"
+                                    ToolTip="Next Track"
                                     Click="OnNextClick">
                                 <Path Data="M 12,2 L 14,2 L 14,14 L 12,14 Z M 11.5,8 L 2,2 L 2,14 Z"
                                       Fill="#FFFFFF"
@@ -281,7 +281,7 @@
                         <Button Grid.Column="2"
                                 Style="{StaticResource IosControlBtnStyle}"
                                 Padding="8"
-                                ToolTip="Buka Jendela Utama YouTube Music"
+                                ToolTip="Open YouTube Music"
                                 Click="OnOpenAppButtonClick">
                             <Path Data="M 9,2 L 14,2 L 14,7 M 14,2 L 8,8 M 6,3 L 3,3 C 2.4,3 2,3.4 2,4 L 2,13 C 2,13.6 2.4,14 3,14 L 12,14 C 12.6,14 13,13.6 13,13 L 13,10"
                                   Stroke="#98989F"

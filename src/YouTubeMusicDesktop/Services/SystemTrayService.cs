@@ -73,7 +73,7 @@ public sealed class SystemTrayService : IDisposable
             Font = new Font("Segoe UI", 9.5f, System.Drawing.FontStyle.Regular)
         };
 
-        ToolStripMenuItem openItem = new("Buka YouTube Music")
+        ToolStripMenuItem openItem = new("Open YouTube Music")
         {
             ForeColor = Color.White,
             Font = new Font("Segoe UI", 9.5f, System.Drawing.FontStyle.Bold)
@@ -86,19 +86,19 @@ public sealed class SystemTrayService : IDisposable
         };
         playPauseItem.Click += async (_, _) => await _executeMediaCommandAsync("playPause");
 
-        ToolStripMenuItem nextItem = new("Lagu Berikutnya (Next)")
+        ToolStripMenuItem nextItem = new("Next Track")
         {
             ForeColor = Color.FromArgb(241, 241, 241)
         };
         nextItem.Click += async (_, _) => await _executeMediaCommandAsync("next");
 
-        ToolStripMenuItem prevItem = new("Lagu Sebelumnya (Previous)")
+        ToolStripMenuItem prevItem = new("Previous Track")
         {
             ForeColor = Color.FromArgb(241, 241, 241)
         };
         prevItem.Click += async (_, _) => await _executeMediaCommandAsync("previous");
 
-        ToolStripMenuItem exitItem = new("Keluar (Exit)")
+        ToolStripMenuItem exitItem = new("Exit")
         {
             ForeColor = Color.FromArgb(255, 110, 110)
         };
