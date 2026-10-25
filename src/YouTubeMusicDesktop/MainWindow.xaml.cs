@@ -245,16 +245,14 @@ public partial class MainWindow : Window
                 ? System.Windows.HorizontalAlignment.Right
                 : System.Windows.HorizontalAlignment.Left;
 
-            // 2. Output Device Cards (Headphones vs Laptop Speakers)
+            // 2. Output Device Cards (Headphones vs Laptop Speakers - Minimalist Icons)
             bool isLaptop = string.Equals(settings.DolbyDeviceMode, "LaptopSpeakers", StringComparison.OrdinalIgnoreCase);
             CardHeadphones.Background = isLaptop ? CardUnselectedBgBrush : CardSelectedBgBrush;
             CardHeadphones.BorderBrush = isLaptop ? CardUnselectedBorderBrush : CardSelectedBorderBrush;
-            HeadphoneTitleText.Foreground = isLaptop ? PillUnselectedFgBrush : Brushes.White;
             HeadphoneIconPath.Stroke = isLaptop ? IconInactiveBrush : IconActiveBrush;
 
             CardLaptopSpeakers.Background = isLaptop ? CardSelectedBgBrush : CardUnselectedBgBrush;
             CardLaptopSpeakers.BorderBrush = isLaptop ? CardSelectedBorderBrush : CardUnselectedBorderBrush;
-            LaptopTitleText.Foreground = isLaptop ? Brushes.White : PillUnselectedFgBrush;
             LaptopIconPath.Stroke = isLaptop ? IconActiveBrush : IconInactiveBrush;
 
             // 3. Preset Buttons

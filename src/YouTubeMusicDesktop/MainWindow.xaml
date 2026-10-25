@@ -399,10 +399,9 @@
                             </Grid>
 
                             <!-- Master Switch Row: Dolby Spatial Audio (Clean, Single Clear Heading) -->
-                            <Border BorderBrush="#1C1C22"
-                                    BorderThickness="0,0,0,1"
-                                    Padding="0,0,0,18"
-                                    Margin="0,0,0,24"
+                            <Border BorderThickness="0"
+                                    Padding="0,0,0,8"
+                                    Margin="0,0,0,20"
                                     Cursor="Hand"
                                     MouseLeftButtonUp="OnDolbyMasterToggleClick">
                                 <Grid>
@@ -450,85 +449,57 @@
                                        FontSize="12"
                                        Margin="0,0,0,12" />
 
-                            <Grid Margin="0,0,0,24">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="14" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Headphones Card -->
+                            <!-- Minimalist Icon-Only Device Selection Buttons -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                                <!-- Headphones Button (Icon Only) -->
                                 <Border x:Name="CardHeadphones"
-                                        Grid.Column="0"
                                         Background="#1E1E24"
                                         BorderBrush="#484854"
                                         BorderThickness="1.2"
                                         CornerRadius="6"
-                                        Padding="16,13"
+                                        Width="56"
+                                        Height="38"
+                                        Margin="0,0,10,0"
                                         Cursor="Hand"
+                                        ToolTip="Headphones / TWS"
                                         MouseLeftButtonUp="OnDeviceHeadphonesClick">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                            <Viewbox Width="16" Height="16" Margin="0,0,8,0">
-                                                <Canvas Width="24" Height="24">
-                                                    <Path x:Name="HeadphoneIconPath"
-                                                          Data="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"
-                                                          Stroke="#FFFFFF"
-                                                          StrokeThickness="2"
-                                                          StrokeStartLineCap="Round"
-                                                          StrokeEndLineCap="Round"
-                                                          StrokeLineJoin="Round" />
-                                                </Canvas>
-                                            </Viewbox>
-                                            <TextBlock x:Name="HeadphoneTitleText"
-                                                       Text="Headphones / TWS"
-                                                       Foreground="#FFFFFF"
-                                                       FontSize="13"
-                                                       FontWeight="SemiBold" />
-                                        </StackPanel>
-                                        <TextBlock Text="Delivers full 3D binaural surround sound and rich, deep sub-bass frequencies."
-                                                   Foreground="#8E8E98"
-                                                   FontSize="11.5"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
+                                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path x:Name="HeadphoneIconPath"
+                                                  Data="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"
+                                                  Stroke="#FFFFFF"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
                                 </Border>
 
-                                <!-- Laptop Speakers Card -->
+                                <!-- Laptop Speakers Button (Icon Only) -->
                                 <Border x:Name="CardLaptopSpeakers"
-                                        Grid.Column="2"
                                         Background="#141418"
                                         BorderBrush="#222227"
                                         BorderThickness="1.2"
                                         CornerRadius="6"
-                                        Padding="16,13"
+                                        Width="56"
+                                        Height="38"
                                         Cursor="Hand"
+                                        ToolTip="Laptop Speakers"
                                         MouseLeftButtonUp="OnDeviceLaptopClick">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                            <Viewbox Width="16" Height="16" Margin="0,0,8,0">
-                                                <Canvas Width="24" Height="24">
-                                                    <Path x:Name="LaptopIconPath"
-                                                          Data="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"
-                                                          Stroke="#82828C"
-                                                          StrokeThickness="2"
-                                                          StrokeStartLineCap="Round"
-                                                          StrokeEndLineCap="Round"
-                                                          StrokeLineJoin="Round" />
-                                                </Canvas>
-                                            </Viewbox>
-                                            <TextBlock x:Name="LaptopTitleText"
-                                                       Text="Laptop Speakers"
-                                                       Foreground="#8E8E98"
-                                                       FontSize="13"
-                                                       FontWeight="SemiBold" />
-                                        </StackPanel>
-                                        <TextBlock Text="Enhances vocal articulation with built-in anti-clipping filter to protect small speakers."
-                                                   Foreground="#8E8E98"
-                                                   FontSize="11.5"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
+                                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path x:Name="LaptopIconPath"
+                                                  Data="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"
+                                                  Stroke="#82828C"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
                                 </Border>
-                            </Grid>
+                            </StackPanel>
 
                             <!-- Sub-Heading: Sound Profile Preset -->
                             <TextBlock Text="Sound Profile Preset"
