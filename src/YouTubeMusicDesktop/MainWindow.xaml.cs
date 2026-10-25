@@ -27,16 +27,30 @@ public partial class MainWindow : Window
     private const string MaximizeGeometryData = "M 0.5,0.5 L 9.5,0.5 L 9.5,9.5 L 0.5,9.5 Z";
     private const string RestoreGeometryData = "M 2.5,0.5 L 9.5,0.5 L 9.5,7.5 L 7.5,7.5 M 0.5,2.5 L 7.5,2.5 L 7.5,9.5 L 0.5,9.5 Z";
 
-    private static readonly Brush AccentRedBrush = new SolidColorBrush(Color.FromRgb(255, 0, 51));
-    private static readonly Brush SwitchOffBrush = new SolidColorBrush(Color.FromRgb(42, 42, 52));
-    private static readonly Brush NavActiveBgBrush = new SolidColorBrush(Color.FromRgb(29, 29, 38));
-    private static readonly Brush NavInactiveTextBrush = new SolidColorBrush(Color.FromRgb(138, 138, 150));
-    private static readonly Brush CardSelectedBgBrush = new SolidColorBrush(Color.FromRgb(25, 21, 26));
-    private static readonly Brush CardUnselectedBgBrush = new SolidColorBrush(Color.FromRgb(18, 18, 23));
-    private static readonly Brush CardUnselectedBorderBrush = new SolidColorBrush(Color.FromRgb(33, 33, 42));
-    private static readonly Brush PillSelectedBgBrush = new SolidColorBrush(Color.FromRgb(255, 0, 51));
+    // Monochromatic Black-and-White Design Brushes (Matching Reference Image 2)
+    private static readonly Brush SwitchOnTrackBrush = new SolidColorBrush(Color.FromRgb(255, 255, 255));
+    private static readonly Brush SwitchOnThumbBrush = new SolidColorBrush(Color.FromRgb(18, 18, 21));
+    private static readonly Brush SwitchOffTrackBrush = new SolidColorBrush(Color.FromRgb(42, 42, 52));
+    private static readonly Brush SwitchOffThumbBrush = new SolidColorBrush(Color.FromRgb(255, 255, 255));
+
+    private static readonly Brush NavActiveBgBrush = new SolidColorBrush(Color.FromRgb(37, 37, 44));
+    private static readonly Brush NavActiveFgBrush = new SolidColorBrush(Color.FromRgb(255, 255, 255));
+    private static readonly Brush NavInactiveFgBrush = new SolidColorBrush(Color.FromRgb(148, 148, 160));
+
+    private static readonly Brush CardSelectedBgBrush = new SolidColorBrush(Color.FromRgb(32, 32, 38));
+    private static readonly Brush CardSelectedBorderBrush = new SolidColorBrush(Color.FromRgb(72, 72, 84));
+    private static readonly Brush CardUnselectedBgBrush = new SolidColorBrush(Color.FromRgb(22, 22, 27));
+    private static readonly Brush CardUnselectedBorderBrush = new SolidColorBrush(Color.FromRgb(34, 34, 39));
+
+    private static readonly Brush PillSelectedBgBrush = new SolidColorBrush(Color.FromRgb(42, 42, 50));
+    private static readonly Brush PillSelectedBorderBrush = new SolidColorBrush(Color.FromRgb(74, 74, 86));
+    private static readonly Brush PillSelectedFgBrush = new SolidColorBrush(Color.FromRgb(255, 255, 255));
     private static readonly Brush PillUnselectedBgBrush = new SolidColorBrush(Color.FromRgb(22, 22, 27));
-    private static readonly Brush PillUnselectedFgBrush = new SolidColorBrush(Color.FromRgb(184, 184, 196));
+    private static readonly Brush PillUnselectedBorderBrush = new SolidColorBrush(Color.FromRgb(34, 34, 39));
+    private static readonly Brush PillUnselectedFgBrush = new SolidColorBrush(Color.FromRgb(142, 142, 152));
+
+    private static readonly Brush IconActiveBrush = new SolidColorBrush(Color.FromRgb(255, 255, 255));
+    private static readonly Brush IconInactiveBrush = new SolidColorBrush(Color.FromRgb(130, 130, 140));
 
     private readonly AdBlockService _adBlockService = new();
     private readonly AppSettingsService _settingsService = new();
@@ -147,7 +161,7 @@ public partial class MainWindow : Window
     }
 
     // =========================================================================
-    // IN-APP FULL-SCREEN SETTINGS VIEW LOGIC
+    // IN-APP FULL-SCREEN MONOCHROMATIC SETTINGS LOGIC
     // =========================================================================
     public void OpenSettings()
     {
@@ -194,7 +208,7 @@ public partial class MainWindow : Window
         ToggleSettings();
     }
 
-    private void OnBackToMusicClick(object sender, MouseButtonEventArgs e)
+    private void OnCloseSettingsButtonClick(object sender, RoutedEventArgs e)
     {
         CloseSettings();
     }
@@ -210,13 +224,13 @@ public partial class MainWindow : Window
         SettingsPanelAbout.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
 
         NavBtnDolby.Background = index == 0 ? NavActiveBgBrush : Brushes.Transparent;
-        NavTxtDolby.Foreground = index == 0 ? Brushes.White : NavInactiveTextBrush;
+        NavTxtDolby.Foreground = index == 0 ? NavActiveFgBrush : NavInactiveFgBrush;
 
         NavBtnIsland.Background = index == 1 ? NavActiveBgBrush : Brushes.Transparent;
-        NavTxtIsland.Foreground = index == 1 ? Brushes.White : NavInactiveTextBrush;
+        NavTxtIsland.Foreground = index == 1 ? NavActiveFgBrush : NavInactiveFgBrush;
 
         NavBtnAbout.Background = index == 2 ? NavActiveBgBrush : Brushes.Transparent;
-        NavTxtAbout.Foreground = index == 2 ? Brushes.White : NavInactiveTextBrush;
+        NavTxtAbout.Foreground = index == 2 ? NavActiveFgBrush : NavInactiveFgBrush;
     }
 
     public void SyncSettingsUiFromModel(AppSettings settings)
@@ -224,18 +238,24 @@ public partial class MainWindow : Window
         _isSyncingSettingsUi = true;
         try
         {
-            // 1. Dolby Master Toggle
-            DolbyToggleTrack.Background = settings.DolbyEnabled ? AccentRedBrush : SwitchOffBrush;
+            // 1. Dolby Master Toggle (Monochromatic: White/Black vs DarkGray/White)
+            DolbyToggleTrack.Background = settings.DolbyEnabled ? SwitchOnTrackBrush : SwitchOffTrackBrush;
+            DolbyToggleThumb.Fill = settings.DolbyEnabled ? SwitchOnThumbBrush : SwitchOffThumbBrush;
             DolbyToggleThumb.HorizontalAlignment = settings.DolbyEnabled
                 ? System.Windows.HorizontalAlignment.Right
                 : System.Windows.HorizontalAlignment.Left;
 
-            // 2. Output Device Cards
+            // 2. Output Device Cards (Headphones vs Laptop Speakers)
             bool isLaptop = string.Equals(settings.DolbyDeviceMode, "LaptopSpeakers", StringComparison.OrdinalIgnoreCase);
             CardHeadphones.Background = isLaptop ? CardUnselectedBgBrush : CardSelectedBgBrush;
-            CardHeadphones.BorderBrush = isLaptop ? CardUnselectedBorderBrush : AccentRedBrush;
+            CardHeadphones.BorderBrush = isLaptop ? CardUnselectedBorderBrush : CardSelectedBorderBrush;
+            HeadphoneTitleText.Foreground = isLaptop ? PillUnselectedFgBrush : Brushes.White;
+            HeadphoneIconPath.Stroke = isLaptop ? IconInactiveBrush : IconActiveBrush;
+
             CardLaptopSpeakers.Background = isLaptop ? CardSelectedBgBrush : CardUnselectedBgBrush;
-            CardLaptopSpeakers.BorderBrush = isLaptop ? AccentRedBrush : CardUnselectedBorderBrush;
+            CardLaptopSpeakers.BorderBrush = isLaptop ? CardSelectedBorderBrush : CardUnselectedBorderBrush;
+            LaptopTitleText.Foreground = isLaptop ? Brushes.White : PillUnselectedFgBrush;
+            LaptopIconPath.Stroke = isLaptop ? IconActiveBrush : IconInactiveBrush;
 
             // 3. Preset Buttons
             UpdatePresetPillSelection(settings.DolbyPreset);
@@ -249,7 +269,8 @@ public partial class MainWindow : Window
             ClarityValueText.Text = $"{(int)ClaritySlider.Value}%";
 
             // 5. Dynamic Island Toggle
-            IslandToggleTrack.Background = settings.DynamicIslandEnabled ? AccentRedBrush : SwitchOffBrush;
+            IslandToggleTrack.Background = settings.DynamicIslandEnabled ? SwitchOnTrackBrush : SwitchOffTrackBrush;
+            IslandToggleThumb.Fill = settings.DynamicIslandEnabled ? SwitchOnThumbBrush : SwitchOffThumbBrush;
             IslandToggleThumb.HorizontalAlignment = settings.DynamicIslandEnabled
                 ? System.Windows.HorizontalAlignment.Right
                 : System.Windows.HorizontalAlignment.Left;
@@ -272,8 +293,8 @@ public partial class MainWindow : Window
     private static void SetPillState(Button btn, bool isSelected)
     {
         btn.Background = isSelected ? PillSelectedBgBrush : PillUnselectedBgBrush;
-        btn.Foreground = isSelected ? Brushes.White : PillUnselectedFgBrush;
-        btn.BorderBrush = isSelected ? AccentRedBrush : CardUnselectedBorderBrush;
+        btn.Foreground = isSelected ? PillSelectedFgBrush : PillUnselectedFgBrush;
+        btn.BorderBrush = isSelected ? PillSelectedBorderBrush : PillUnselectedBorderBrush;
     }
 
     private void SaveAndApplySettings(AppSettings updated)
