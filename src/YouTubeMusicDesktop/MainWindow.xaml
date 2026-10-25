@@ -561,58 +561,52 @@
                                        FontSize="12"
                                        Margin="0,0,0,14" />
 
-                            <!-- Flat Equalizer Slider Rows -->
+                            <!-- Flat Equalizer Slider Rows (Clean, No Divider Lines) -->
                             <StackPanel Margin="0,0,0,8">
                                 <!-- Slider 1: 3D Surround Width -->
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
-                                    <StackPanel>
-                                        <Grid Margin="0,0,0,6">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="3D Spatial Width" Foreground="#FFFFFF" FontSize="13" FontWeight="Medium" />
-                                                <TextBlock Text=" • Expands the soundstage outside your head" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
-                                            </StackPanel>
-                                            <TextBlock x:Name="SurroundValueText" Text="70%" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
-                                        </Grid>
-                                        <Slider x:Name="SurroundSlider"
-                                                Style="{StaticResource MonoSettingsSliderStyle}"
-                                                Value="70"
-                                                ValueChanged="OnDspSliderValueChanged" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Margin="0,0,0,18">
+                                    <Grid Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="3D Spatial Width" Foreground="#FFFFFF" FontSize="13" FontWeight="Medium" />
+                                            <TextBlock Text=" • Expands the soundstage outside your head" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="SurroundValueText" Text="70%" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider x:Name="SurroundSlider"
+                                            Style="{StaticResource MonoSettingsSliderStyle}"
+                                            Value="70"
+                                            ValueChanged="OnDspSliderValueChanged" />
+                                </StackPanel>
 
                                 <!-- Slider 2: Bass Enhancer -->
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
-                                    <StackPanel>
-                                        <Grid Margin="0,0,0,6">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Bass Depth &amp; Warmth" Foreground="#FFFFFF" FontSize="13" FontWeight="Medium" />
-                                                <TextBlock Text=" • Round, deep sub-frequencies" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
-                                            </StackPanel>
-                                            <TextBlock x:Name="BassValueText" Text="65%" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
-                                        </Grid>
-                                        <Slider x:Name="BassSlider"
-                                                Style="{StaticResource MonoSettingsSliderStyle}"
-                                                Value="65"
-                                                ValueChanged="OnDspSliderValueChanged" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Margin="0,0,0,18">
+                                    <Grid Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Bass Depth &amp; Warmth" Foreground="#FFFFFF" FontSize="13" FontWeight="Medium" />
+                                            <TextBlock Text=" • Round, deep sub-frequencies" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="BassValueText" Text="65%" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider x:Name="BassSlider"
+                                            Style="{StaticResource MonoSettingsSliderStyle}"
+                                            Value="65"
+                                            ValueChanged="OnDspSliderValueChanged" />
+                                </StackPanel>
 
                                 <!-- Slider 3: Vocal Clarity -->
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="0,0,0,14">
-                                    <StackPanel>
-                                        <Grid Margin="0,0,0,6">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Vocal Clarity" Foreground="#FFFFFF" FontSize="13" FontWeight="Medium" />
-                                                <TextBlock Text=" • Sharpens vocal presence &amp; high-frequency sheen" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
-                                            </StackPanel>
-                                            <TextBlock x:Name="ClarityValueText" Text="60%" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
-                                        </Grid>
-                                        <Slider x:Name="ClaritySlider"
-                                                Style="{StaticResource MonoSettingsSliderStyle}"
-                                                Value="60"
-                                                ValueChanged="OnDspSliderValueChanged" />
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel Margin="0,0,0,10">
+                                    <Grid Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Vocal Clarity" Foreground="#FFFFFF" FontSize="13" FontWeight="Medium" />
+                                            <TextBlock Text=" • Sharpens vocal presence &amp; high-frequency sheen" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="ClarityValueText" Text="60%" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider x:Name="ClaritySlider"
+                                            Style="{StaticResource MonoSettingsSliderStyle}"
+                                            Value="60"
+                                            ValueChanged="OnDspSliderValueChanged" />
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
 
@@ -659,11 +653,10 @@
                                 </Button>
                             </Grid>
 
-                            <!-- Master Toggle Row (Flat) -->
-                            <Border BorderBrush="#1C1C22"
-                                    BorderThickness="0,0,0,1"
-                                    Padding="0,0,0,16"
-                                    Margin="0,0,0,20"
+                            <!-- Master Toggle Row (Clean Flat) -->
+                            <Border BorderThickness="0"
+                                    Padding="0"
+                                    Margin="0,0,0,16"
                                     Cursor="Hand"
                                     MouseLeftButtonUp="OnIslandMasterToggleClick">
                                 <Grid>
@@ -699,35 +692,6 @@
                                     </Border>
                                 </Grid>
                             </Border>
-
-                            <!-- Features List (Flat clean rows) -->
-                            <StackPanel Margin="0,4,0,0">
-                                <TextBlock Text="Desktop Behavior"
-                                           Foreground="#FFFFFF"
-                                           FontSize="13.5"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,0,10" />
-
-                                <TextBlock Text="• Desktop-Only Visibility: The Dynamic Island monitors window Z-Order in real-time. It only appears when you are looking at your Windows Desktop ('Show Desktop') and automatically hides whenever you open Edge, Chrome, or any application window."
-                                           Foreground="#9494A0"
-                                           FontSize="12"
-                                           LineHeight="20"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,12" />
-
-                                <TextBlock Text="• VSync Spring Morphing: Hover your mouse cursor over the pill to smoothly morph it from a compact capsule (210×36) into an expanded media card (390×172) featuring album art, live 5-bar equalizer visualizer, interactive seek bar, and transport controls."
-                                           Foreground="#9494A0"
-                                           FontSize="12"
-                                           LineHeight="20"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,12" />
-
-                                <TextBlock Text="• Silent Background Mode: When disabled, closing or minimizing the app plays audio silently in the Windows System Tray without showing the floating desktop pill."
-                                           Foreground="#7A7A86"
-                                           FontSize="11.5"
-                                           LineHeight="18"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
                         </StackPanel>
 
                         <!-- ================================================= -->
@@ -816,39 +780,11 @@
                                 </StackPanel>
                             </Grid>
 
-                            <!-- Specification Table (Flat Hairline Dividers) -->
-                            <StackPanel Margin="0,0,0,24">
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,1,0,0" Padding="0,12">
-                                    <Grid>
-                                        <TextBlock Text="Application Version" Foreground="#7E7E8A" FontSize="12.5" />
-                                        <TextBlock Text="v1.1.0 (Production Release)" Foreground="#FFFFFF" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
-                                    </Grid>
-                                </Border>
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,1,0,0" Padding="0,12">
-                                    <Grid>
-                                        <TextBlock Text="Runtime Architecture" Foreground="#7E7E8A" FontSize="12.5" />
-                                        <TextBlock Text="Microsoft .NET 8.0 (64-bit WPF Native)" Foreground="#FFFFFF" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
-                                    </Grid>
-                                </Border>
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,1,0,0" Padding="0,12">
-                                    <Grid>
-                                        <TextBlock Text="Web Rendering Engine" Foreground="#7E7E8A" FontSize="12.5" />
-                                        <TextBlock Text="Microsoft Edge WebView2 (Chromium)" Foreground="#FFFFFF" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
-                                    </Grid>
-                                </Border>
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,1,0,0" Padding="0,12">
-                                    <Grid>
-                                        <TextBlock Text="AdBlock &amp; DSP Core" Foreground="#7E7E8A" FontSize="12.5" />
-                                        <TextBlock Text="Integrated 4-Layer Engine + Web Audio DSP" Foreground="#FFFFFF" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
-                                    </Grid>
-                                </Border>
-                                <Border BorderBrush="#1C1C22" BorderThickness="0,1,0,1" Padding="0,12">
-                                    <Grid>
-                                        <TextBlock Text="Developer" Foreground="#7E7E8A" FontSize="12.5" />
-                                        <TextBlock Text="Arisa Akiyama" Foreground="#FFFFFF" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
+                            <!-- Version Info (Clean Minimalist) -->
+                            <Grid Margin="0,0,0,24">
+                                <TextBlock Text="Version" Foreground="#7E7E8A" FontSize="13" VerticalAlignment="Center" />
+                                <TextBlock Text="v1.1.0" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
 
                             <!-- GitHub Action Button (With Official GitHub Octocat SVG Logo) -->
                             <Button HorizontalAlignment="Left"
