@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
@@ -11,8 +13,11 @@ using YouTubeMusicDesktop.Interop;
 using YouTubeMusicDesktop.Models;
 using YouTubeMusicDesktop.Services;
 using Application = System.Windows.Application;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using Button = System.Windows.Controls.Button;
+using Color = System.Windows.Media.Color;
 using MessageBox = System.Windows.MessageBox;
-using Point = System.Windows.Point;
 
 namespace YouTubeMusicDesktop;
 
@@ -22,11 +27,24 @@ public partial class MainWindow : Window
     private const string MaximizeGeometryData = "M 0.5,0.5 L 9.5,0.5 L 9.5,9.5 L 0.5,9.5 Z";
     private const string RestoreGeometryData = "M 2.5,0.5 L 9.5,0.5 L 9.5,7.5 L 7.5,7.5 M 0.5,2.5 L 7.5,2.5 L 7.5,9.5 L 0.5,9.5 Z";
 
+    private static readonly Brush AccentRedBrush = new SolidColorBrush(Color.FromRgb(255, 0, 51));
+    private static readonly Brush SwitchOffBrush = new SolidColorBrush(Color.FromRgb(42, 42, 52));
+    private static readonly Brush NavActiveBgBrush = new SolidColorBrush(Color.FromRgb(29, 29, 38));
+    private static readonly Brush NavInactiveTextBrush = new SolidColorBrush(Color.FromRgb(138, 138, 150));
+    private static readonly Brush CardSelectedBgBrush = new SolidColorBrush(Color.FromRgb(25, 21, 26));
+    private static readonly Brush CardUnselectedBgBrush = new SolidColorBrush(Color.FromRgb(18, 18, 23));
+    private static readonly Brush CardUnselectedBorderBrush = new SolidColorBrush(Color.FromRgb(33, 33, 42));
+    private static readonly Brush PillSelectedBgBrush = new SolidColorBrush(Color.FromRgb(255, 0, 51));
+    private static readonly Brush PillUnselectedBgBrush = new SolidColorBrush(Color.FromRgb(22, 22, 27));
+    private static readonly Brush PillUnselectedFgBrush = new SolidColorBrush(Color.FromRgb(184, 184, 196));
+
     private readonly AdBlockService _adBlockService = new();
     private readonly AppSettingsService _settingsService = new();
     private readonly SystemTrayService _systemTrayService;
     private readonly DynamicIslandWindow _dynamicIsland;
-    private SettingsWindow? _settingsWindow;
+    private string _currentDocumentTitle = "YouTube Music";
+    private bool _isSettingsOpen;
+    private bool _isSyncingSettingsUi;
     private bool _isExplicitExit;
 
     public MainWindow()
@@ -43,13 +61,13 @@ public partial class MainWindow : Window
             restoreMainWindowAction: () => Dispatcher.Invoke(RestoreFromTray),
             executeMediaCommandAsync: ExecutePlayerCommandAsync);
 
+        SyncSettingsUiFromModel(_settingsService.Current);
         UpdateHeaderIndicators(_settingsService.Current);
         UpdateTitleBarStateVisuals();
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
         StateChanged += OnWindowStateChanged;
-        LocationChanged += (_, _) => _settingsWindow?.Hide();
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
     }
 
@@ -89,7 +107,6 @@ public partial class MainWindow : Window
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
         UpdateTitleBarStateVisuals();
-        _settingsWindow?.Hide();
 
         if (WindowState == WindowState.Minimized)
         {
@@ -129,58 +146,237 @@ public partial class MainWindow : Window
             : Visibility.Collapsed;
     }
 
+    // =========================================================================
+    // IN-APP FULL-SCREEN SETTINGS VIEW LOGIC
+    // =========================================================================
+    public void OpenSettings()
+    {
+        _isSettingsOpen = true;
+        SyncSettingsUiFromModel(_settingsService.Current);
+        MusicWebView.Visibility = Visibility.Hidden;
+        SettingsOverlayGrid.Visibility = Visibility.Visible;
+        Title = "Settings • YouTube Music";
+        SwitchSettingsTab(0);
+    }
+
+    public void CloseSettings()
+    {
+        _isSettingsOpen = false;
+        SettingsOverlayGrid.Visibility = Visibility.Collapsed;
+        MusicWebView.Visibility = Visibility.Visible;
+        Title = _currentDocumentTitle;
+        MusicWebView.Focus();
+    }
+
+    public void ToggleSettings()
+    {
+        if (_isSettingsOpen)
+        {
+            CloseSettings();
+        }
+        else
+        {
+            OpenSettings();
+        }
+    }
+
+    private void OnWindowPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && _isSettingsOpen)
+        {
+            e.Handled = true;
+            CloseSettings();
+        }
+    }
+
     private void OnSettingsButtonClick(object sender, RoutedEventArgs e)
     {
-        if (_settingsWindow is null)
+        ToggleSettings();
+    }
+
+    private void OnBackToMusicClick(object sender, MouseButtonEventArgs e)
+    {
+        CloseSettings();
+    }
+
+    private void OnNavDolbyClick(object sender, MouseButtonEventArgs e) => SwitchSettingsTab(0);
+    private void OnNavIslandClick(object sender, MouseButtonEventArgs e) => SwitchSettingsTab(1);
+    private void OnNavAboutClick(object sender, MouseButtonEventArgs e) => SwitchSettingsTab(2);
+
+    private void SwitchSettingsTab(int index)
+    {
+        SettingsPanelDolby.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
+        SettingsPanelIsland.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
+        SettingsPanelAbout.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+
+        NavBtnDolby.Background = index == 0 ? NavActiveBgBrush : Brushes.Transparent;
+        NavTxtDolby.Foreground = index == 0 ? Brushes.White : NavInactiveTextBrush;
+
+        NavBtnIsland.Background = index == 1 ? NavActiveBgBrush : Brushes.Transparent;
+        NavTxtIsland.Foreground = index == 1 ? Brushes.White : NavInactiveTextBrush;
+
+        NavBtnAbout.Background = index == 2 ? NavActiveBgBrush : Brushes.Transparent;
+        NavTxtAbout.Foreground = index == 2 ? Brushes.White : NavInactiveTextBrush;
+    }
+
+    public void SyncSettingsUiFromModel(AppSettings settings)
+    {
+        _isSyncingSettingsUi = true;
+        try
         {
-            _settingsWindow = new SettingsWindow(_settingsService, OnAppSettingsUpdated)
-            {
-                Owner = this
-            };
+            // 1. Dolby Master Toggle
+            DolbyToggleTrack.Background = settings.DolbyEnabled ? AccentRedBrush : SwitchOffBrush;
+            DolbyToggleThumb.HorizontalAlignment = settings.DolbyEnabled
+                ? System.Windows.HorizontalAlignment.Right
+                : System.Windows.HorizontalAlignment.Left;
+
+            // 2. Output Device Cards
+            bool isLaptop = string.Equals(settings.DolbyDeviceMode, "LaptopSpeakers", StringComparison.OrdinalIgnoreCase);
+            CardHeadphones.Background = isLaptop ? CardUnselectedBgBrush : CardSelectedBgBrush;
+            CardHeadphones.BorderBrush = isLaptop ? CardUnselectedBorderBrush : AccentRedBrush;
+            CardLaptopSpeakers.Background = isLaptop ? CardSelectedBgBrush : CardUnselectedBgBrush;
+            CardLaptopSpeakers.BorderBrush = isLaptop ? AccentRedBrush : CardUnselectedBorderBrush;
+
+            // 3. Preset Buttons
+            UpdatePresetPillSelection(settings.DolbyPreset);
+
+            // 4. Sliders
+            SurroundSlider.Value = Math.Clamp(settings.SurroundLevel, 0, 100);
+            BassSlider.Value = Math.Clamp(settings.BassLevel, 0, 100);
+            ClaritySlider.Value = Math.Clamp(settings.ClarityLevel, 0, 100);
+            SurroundValueText.Text = $"{(int)SurroundSlider.Value}%";
+            BassValueText.Text = $"{(int)BassSlider.Value}%";
+            ClarityValueText.Text = $"{(int)ClaritySlider.Value}%";
+
+            // 5. Dynamic Island Toggle
+            IslandToggleTrack.Background = settings.DynamicIslandEnabled ? AccentRedBrush : SwitchOffBrush;
+            IslandToggleThumb.HorizontalAlignment = settings.DynamicIslandEnabled
+                ? System.Windows.HorizontalAlignment.Right
+                : System.Windows.HorizontalAlignment.Left;
+        }
+        finally
+        {
+            _isSyncingSettingsUi = false;
+        }
+    }
+
+    private void UpdatePresetPillSelection(string activePreset)
+    {
+        SetPillState(PresetMusicBtn, string.Equals(activePreset, "Music", StringComparison.OrdinalIgnoreCase));
+        SetPillState(PresetCinemaBtn, string.Equals(activePreset, "Cinema", StringComparison.OrdinalIgnoreCase));
+        SetPillState(PresetBassBtn, string.Equals(activePreset, "BassBoost", StringComparison.OrdinalIgnoreCase));
+        SetPillState(PresetVocalBtn, string.Equals(activePreset, "Vocal", StringComparison.OrdinalIgnoreCase));
+        SetPillState(PresetDynamicBtn, string.Equals(activePreset, "Dynamic", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void SetPillState(Button btn, bool isSelected)
+    {
+        btn.Background = isSelected ? PillSelectedBgBrush : PillUnselectedBgBrush;
+        btn.Foreground = isSelected ? Brushes.White : PillUnselectedFgBrush;
+        btn.BorderBrush = isSelected ? AccentRedBrush : CardUnselectedBorderBrush;
+    }
+
+    private void SaveAndApplySettings(AppSettings updated)
+    {
+        _settingsService.Save(updated);
+        SyncSettingsUiFromModel(updated);
+        UpdateHeaderIndicators(updated);
+
+        if (!updated.DynamicIslandEnabled)
+        {
+            _dynamicIsland.HideIsland();
+        }
+        else if (WindowState == WindowState.Minimized || !IsVisible)
+        {
+            _dynamicIsland.ShowIsland();
         }
 
-        if (_settingsWindow.IsVisible)
+        _ = PushAudioSettingsToWebViewAsync();
+    }
+
+    private void OnDolbyMasterToggleClick(object sender, MouseButtonEventArgs e)
+    {
+        AppSettings next = _settingsService.Current.Clone();
+        next.DolbyEnabled = !next.DolbyEnabled;
+        SaveAndApplySettings(next);
+    }
+
+    private void OnDeviceHeadphonesClick(object sender, MouseButtonEventArgs e)
+    {
+        AppSettings next = _settingsService.Current.Clone();
+        next.DolbyDeviceMode = "Headphones";
+        next.DolbyEnabled = true;
+        SaveAndApplySettings(next);
+    }
+
+    private void OnDeviceLaptopClick(object sender, MouseButtonEventArgs e)
+    {
+        AppSettings next = _settingsService.Current.Clone();
+        next.DolbyDeviceMode = "LaptopSpeakers";
+        next.DolbyEnabled = true;
+        SaveAndApplySettings(next);
+    }
+
+    private void ApplyPreset(string presetName, int surround, int bass, int clarity)
+    {
+        AppSettings next = _settingsService.Current.Clone();
+        next.DolbyEnabled = true;
+        next.DolbyPreset = presetName;
+        next.SurroundLevel = surround;
+        next.BassLevel = bass;
+        next.ClarityLevel = clarity;
+        SaveAndApplySettings(next);
+    }
+
+    private void OnPresetMusicClick(object sender, RoutedEventArgs e) => ApplyPreset("Music", 70, 68, 65);
+    private void OnPresetCinemaClick(object sender, RoutedEventArgs e) => ApplyPreset("Cinema", 92, 75, 72);
+    private void OnPresetBassClick(object sender, RoutedEventArgs e) => ApplyPreset("BassBoost", 65, 92, 58);
+    private void OnPresetVocalClick(object sender, RoutedEventArgs e) => ApplyPreset("Vocal", 55, 42, 90);
+    private void OnPresetDynamicClick(object sender, RoutedEventArgs e) => ApplyPreset("Dynamic", 78, 72, 75);
+
+    private void OnDspSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isSyncingSettingsUi || !IsLoaded)
         {
-            _settingsWindow.Hide();
             return;
         }
 
-        _settingsWindow.SyncUiFromSettings(_settingsService.Current);
+        int s = (int)Math.Round(SurroundSlider.Value);
+        int b = (int)Math.Round(BassSlider.Value);
+        int c = (int)Math.Round(ClaritySlider.Value);
 
-        // Position the Settings Flyout directly below the Settings button (aligned right)
+        SurroundValueText.Text = $"{s}%";
+        BassValueText.Text = $"{b}%";
+        ClarityValueText.Text = $"{c}%";
+
+        AppSettings next = _settingsService.Current.Clone();
+        next.SurroundLevel = s;
+        next.BassLevel = b;
+        next.ClarityLevel = c;
+        _settingsService.Save(next);
+        _ = PushAudioSettingsToWebViewAsync();
+    }
+
+    private void OnIslandMasterToggleClick(object sender, MouseButtonEventArgs e)
+    {
+        AppSettings next = _settingsService.Current.Clone();
+        next.DynamicIslandEnabled = !next.DynamicIslandEnabled;
+        SaveAndApplySettings(next);
+    }
+
+    private void OnOpenGitHubClick(object sender, RoutedEventArgs e)
+    {
         try
         {
-            Point btnBottomRight = SettingsTitleBarButton.PointToScreen(
-                new Point(SettingsTitleBarButton.ActualWidth, SettingsTitleBarButton.ActualHeight));
-
-            PresentationSource? source = PresentationSource.FromVisual(this);
-            double dpiX = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-            double dpiY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
-
-            double dipRight = btnBottomRight.X / dpiX;
-            double dipBottom = btnBottomRight.Y / dpiY;
-
-            Rect workArea = SystemParameters.WorkArea;
-            double targetLeft = Math.Clamp(
-                dipRight - _settingsWindow.Width + 8,
-                workArea.Left + 8,
-                workArea.Right - _settingsWindow.Width - 8);
-            double winHeight = _settingsWindow.ActualHeight > 0 ? _settingsWindow.ActualHeight : 390;
-            double targetTop = Math.Clamp(
-                dipBottom + 2,
-                workArea.Top + 8,
-                workArea.Bottom - winHeight - 8);
-
-            _settingsWindow.Left = targetLeft;
-            _settingsWindow.Top = targetTop;
+            Process.Start(new ProcessStartInfo("https://github.com/ArisaAkiyama/ytm-desktop")
+            {
+                UseShellExecute = true
+            });
         }
         catch
         {
-            _settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            // Ignore browser launch errors
         }
-
-        _settingsWindow.Show();
-        _settingsWindow.Activate();
     }
 
     private void OnMinimizeButtonClick(object sender, RoutedEventArgs e)
@@ -198,22 +394,6 @@ public partial class MainWindow : Window
     private void OnCloseCaptionButtonClick(object sender, RoutedEventArgs e)
     {
         Close();
-    }
-
-    private async void OnAppSettingsUpdated(AppSettings updated)
-    {
-        UpdateHeaderIndicators(updated);
-
-        if (!updated.DynamicIslandEnabled)
-        {
-            _dynamicIsland.HideIsland();
-        }
-        else if (WindowState == WindowState.Minimized || !IsVisible)
-        {
-            _dynamicIsland.ShowIsland();
-        }
-
-        await PushAudioSettingsToWebViewAsync();
     }
 
     private async Task PushAudioSettingsToWebViewAsync()
@@ -300,8 +480,12 @@ public partial class MainWindow : Window
         coreWv.DocumentTitleChanged += (_, _) =>
         {
             string docTitle = coreWv.DocumentTitle;
-            Title = string.IsNullOrWhiteSpace(docTitle) ? "YouTube Music" : docTitle;
-            _systemTrayService.UpdateTrackTooltip(docTitle);
+            _currentDocumentTitle = string.IsNullOrWhiteSpace(docTitle) ? "YouTube Music" : docTitle;
+            if (!_isSettingsOpen)
+            {
+                Title = _currentDocumentTitle;
+            }
+            _systemTrayService.UpdateTrackTooltip(_currentDocumentTitle);
         };
 
         coreWv.NavigationCompleted += async (_, _) =>
@@ -427,13 +611,15 @@ public partial class MainWindow : Window
             NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
             NativeMethods.SetForegroundWindow(hwnd);
         }
-        MusicWebView.Focus();
+        if (!_isSettingsOpen)
+        {
+            MusicWebView.Focus();
+        }
     }
 
     public void AllowSessionEndingClose()
     {
         _isExplicitExit = true;
-        _settingsWindow?.Close();
         _dynamicIsland.Close();
         _systemTrayService.Dispose();
     }
@@ -441,7 +627,6 @@ public partial class MainWindow : Window
     private void ExitApplication()
     {
         _isExplicitExit = true;
-        _settingsWindow?.Close();
         _dynamicIsland.Close();
         _systemTrayService.Dispose();
         Close();
@@ -454,7 +639,6 @@ public partial class MainWindow : Window
         {
             // Keep music playing in background via System Tray & show Dynamic Island (if enabled) when user clicks 'X'
             e.Cancel = true;
-            _settingsWindow?.Hide();
             Hide();
             ShowInTaskbar = false;
 
@@ -470,7 +654,6 @@ public partial class MainWindow : Window
         }
 
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
-        _settingsWindow?.Close();
         _dynamicIsland.Close();
         _systemTrayService.Dispose();
         base.OnClosing(e);

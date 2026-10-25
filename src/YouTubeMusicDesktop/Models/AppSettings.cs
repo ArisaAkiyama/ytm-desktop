@@ -11,7 +11,7 @@ public sealed class AppSettings
     public string DolbyDeviceMode { get; set; } = "Headphones";
 
     [JsonPropertyName("dolbyPreset")]
-    public string DolbyPreset { get; set; } = "Balanced";
+    public string DolbyPreset { get; set; } = "Music";
 
     [JsonPropertyName("surroundLevel")]
     public int SurroundLevel { get; set; } = 70;

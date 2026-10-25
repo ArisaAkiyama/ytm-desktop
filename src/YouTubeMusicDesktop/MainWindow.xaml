@@ -5,15 +5,16 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="YouTube Music"
         Icon="pack://application:,,,/Assets/ytm.ico"
-        Width="1140"
-        Height="620"
-        MinWidth="720"
-        MinHeight="480"
+        Width="1180"
+        Height="680"
+        MinWidth="820"
+        MinHeight="520"
         WindowStartupLocation="Manual"
         WindowState="Maximized"
         Background="#030303"
         UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        SnapsToDevicePixels="True"
+        PreviewKeyDown="OnWindowPreviewKeyDown">
 
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="32"
@@ -24,7 +25,7 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <!-- Title Bar Standard Button Style (Settings, Minimize, Maximize) -->
+        <!-- Title Bar Caption Button Style -->
         <Style x:Key="TitleBarCaptionBtnStyle" TargetType="Button">
             <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="32" />
@@ -74,6 +75,76 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Modern Fluent Slider Style -->
+        <Style x:Key="FluentSettingsSliderStyle" TargetType="Slider">
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="100" />
+            <Setter Property="IsMoveToPointEnabled" Value="True" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center" Height="24" Background="Transparent">
+                            <Border Height="4"
+                                    CornerRadius="2"
+                                    Background="#26262E"
+                                    VerticalAlignment="Center" />
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Opacity="0" IsHitTestVisible="False" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Opacity="0" IsHitTestVisible="False" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="16" Height="16">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Width="16"
+                                                        Height="16"
+                                                        CornerRadius="8"
+                                                        Background="#FFFFFF"
+                                                        BorderBrush="#FF0033"
+                                                        BorderThickness="2.5" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Preset Pill Button Style -->
+        <Style x:Key="FluentPresetPillStyle" TargetType="Button">
+            <Setter Property="Background" Value="#16161B" />
+            <Setter Property="Foreground" Value="#B8B8C4" />
+            <Setter Property="BorderBrush" Value="#25252E" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PillBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid x:Name="RootLayoutGrid" Background="#030303">
@@ -82,14 +153,16 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Row 0: Native Dark Header Bar (#030303) -->
+        <!-- ================================================================= -->
+        <!-- ROW 0: NATIVE TITLE BAR (#030303)                                 -->
+        <!-- ================================================================= -->
         <Grid Grid.Row="0" Background="#030303">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- Left: App Icon & Dynamic Song Title -->
+            <!-- Left: App Icon & Song / Page Title -->
             <StackPanel Grid.Column="0"
                         Orientation="Horizontal"
                         VerticalAlignment="Center"
@@ -110,16 +183,16 @@
                            VerticalAlignment="Center" />
             </StackPanel>
 
-            <!-- Right: Settings Button (Left of Minimize) + Window Caption Buttons -->
+            <!-- Right: Settings Button (Left of Minimize) + Caption Buttons -->
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center">
 
-                <!-- 1. Settings & Dolby DSP Button (Lucide settings.svg from GitHub) -->
+                <!-- Settings Button (Lucide settings.svg from GitHub) -->
                 <Button x:Name="SettingsTitleBarButton"
                         Style="{StaticResource TitleBarCaptionBtnStyle}"
-                        ToolTip="Settings (Dolby Spatial Audio, Dynamic Island &amp; About)"
+                        ToolTip="Settings (Dolby Audio, Dynamic Island &amp; About)"
                         Click="OnSettingsButtonClick">
                     <Grid Width="18" Height="18">
                         <Viewbox Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -133,7 +206,7 @@
                             </Canvas>
                         </Viewbox>
 
-                        <!-- Active Indicator Dot when Dolby Spatial Audio is ON -->
+                        <!-- Indicator dot when Dolby Spatial Audio is active -->
                         <Ellipse x:Name="DolbyHeaderIndicatorDot"
                                  Width="6"
                                  Height="6"
@@ -144,7 +217,7 @@
                     </Grid>
                 </Button>
 
-                <!-- 2. Minimize Button -->
+                <!-- Minimize Button -->
                 <Button Style="{StaticResource TitleBarCaptionBtnStyle}"
                         ToolTip="Minimize"
                         Click="OnMinimizeButtonClick">
@@ -155,7 +228,7 @@
                           Height="10" />
                 </Button>
 
-                <!-- 3. Maximize / Restore Button -->
+                <!-- Maximize / Restore Button -->
                 <Button Style="{StaticResource TitleBarCaptionBtnStyle}"
                         ToolTip="Maximize / Restore"
                         Click="OnMaximizeRestoreButtonClick">
@@ -167,7 +240,7 @@
                           Height="10" />
                 </Button>
 
-                <!-- 4. Close Button -->
+                <!-- Close Button -->
                 <Button Style="{StaticResource TitleBarCloseBtnStyle}"
                         ToolTip="Close to System Tray"
                         Click="OnCloseCaptionButtonClick">
@@ -180,11 +253,599 @@
             </StackPanel>
         </Grid>
 
-        <!-- Row 1: Main YouTube Music WebView2 Surface -->
-        <wv2:WebView2 x:Name="MusicWebView"
-                      Grid.Row="1"
-                      DefaultBackgroundColor="#030303"
-                      HorizontalAlignment="Stretch"
-                      VerticalAlignment="Stretch" />
+        <!-- ================================================================= -->
+        <!-- ROW 1: CONTENT LAYER (WebView2 Player OR Full-Screen Settings)    -->
+        <!-- ================================================================= -->
+        <Grid Grid.Row="1">
+            <!-- 1. Authentic YouTube Music Web View (Zero modifications) -->
+            <wv2:WebView2 x:Name="MusicWebView"
+                          DefaultBackgroundColor="#030303"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch" />
+
+            <!-- 2. Full-Screen In-App Settings View -->
+            <Grid x:Name="SettingsOverlayGrid"
+                  Background="#08080A"
+                  Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="230" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ========================================================= -->
+                <!-- LEFT SIDEBAR: Navigation & Back to Music                  -->
+                <!-- ========================================================= -->
+                <Border Grid.Column="0"
+                        Background="#0D0D11"
+                        BorderBrush="#1B1B22"
+                        BorderThickness="0,0,1,0"
+                        Padding="18,22,18,22">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Back to Music Button -->
+                        <Border Grid.Row="0"
+                                Background="#16161D"
+                                BorderBrush="#252530"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12,10"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnBackToMusicClick"
+                                Margin="0,0,0,24">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Lucide arrow-left.svg -->
+                                    <Viewbox Width="14" Height="14" Margin="0,0,8,0">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M19 12H5 M12 19l-7-7 7-7"
+                                                  Stroke="#FFFFFF"
+                                                  StrokeThickness="2.2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                    <TextBlock Text="Back to Music"
+                                               Foreground="#FFFFFF"
+                                               FontSize="12.5"
+                                               FontWeight="SemiBold" />
+                                </StackPanel>
+                                <Border Background="#252530"
+                                        CornerRadius="4"
+                                        Padding="5,1"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="ESC"
+                                               Foreground="#9E9EA8"
+                                               FontSize="10"
+                                               FontWeight="Bold" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Category Title -->
+                        <TextBlock Grid.Row="1"
+                                   Text="Preferences"
+                                   Foreground="#6C6C78"
+                                   FontSize="11"
+                                   FontWeight="Bold"
+                                   Margin="6,0,0,10" />
+
+                        <!-- Nav Items -->
+                        <StackPanel Grid.Row="2">
+                            <!-- Nav 1: Dolby Audio -->
+                            <Border x:Name="NavBtnDolby"
+                                    Background="#1D1D26"
+                                    CornerRadius="8"
+                                    Padding="12,11"
+                                    Margin="0,0,0,4"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="OnNavDolbyClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <Viewbox Width="15" Height="15" Margin="0,0,10,0">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M21 4h-7 M10 4H3 M21 12h-9 M8 12H3 M21 20h-5 M12 20H3 M14 2v4 M8 10v4 M16 18v4"
+                                                  Stroke="#FFFFFF"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                    <TextBlock x:Name="NavTxtDolby"
+                                               Text="Dolby Audio DSP"
+                                               Foreground="#FFFFFF"
+                                               FontSize="12.5"
+                                               FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Nav 2: Dynamic Island -->
+                            <Border x:Name="NavBtnIsland"
+                                    Background="Transparent"
+                                    CornerRadius="8"
+                                    Padding="12,11"
+                                    Margin="0,0,0,4"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="OnNavIslandClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <Viewbox Width="15" Height="15" Margin="0,0,10,0">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M4 9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z M9 12h6"
+                                                  Stroke="#8A8A96"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                    <TextBlock x:Name="NavTxtIsland"
+                                               Text="Dynamic Island"
+                                               Foreground="#8A8A96"
+                                               FontSize="12.5"
+                                               FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Nav 3: About -->
+                            <Border x:Name="NavBtnAbout"
+                                    Background="Transparent"
+                                    CornerRadius="8"
+                                    Padding="12,11"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="OnNavAboutClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <Viewbox Width="15" Height="15" Margin="0,0,10,0">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 16v-4 M12 8h.01"
+                                                  Stroke="#8A8A96"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                    <TextBlock x:Name="NavTxtAbout"
+                                               Text="About"
+                                               Foreground="#8A8A96"
+                                               FontSize="12.5"
+                                               FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- App Version Tag at bottom of sidebar -->
+                        <TextBlock Grid.Row="3"
+                                   Text="YouTube Music Desktop • v1.1.0"
+                                   Foreground="#4E4E58"
+                                   FontSize="10.5"
+                                   HorizontalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- ========================================================= -->
+                <!-- RIGHT CONTENT PANE: Wide, Spacious, Modern Design         -->
+                <!-- ========================================================= -->
+                <ScrollViewer Grid.Column="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <Grid MaxWidth="820"
+                          HorizontalAlignment="Left"
+                          Margin="48,32,48,48">
+
+                        <!-- ================================================= -->
+                        <!-- TAB 1: DOLBY AUDIO DSP CONTENT                    -->
+                        <!-- ================================================= -->
+                        <StackPanel x:Name="SettingsPanelDolby" Visibility="Visible">
+                            <!-- Section Title -->
+                            <TextBlock Text="Dolby Spatial Audio DSP"
+                                       Foreground="#FFFFFF"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Hardware-accelerated virtual surround, sub-bass enhancement, and speaker protection."
+                                       Foreground="#8E8E9A"
+                                       FontSize="13"
+                                       Margin="0,0,0,24" />
+
+                            <!-- Master Toggle Card -->
+                            <Border Background="#121217"
+                                    BorderBrush="#21212A"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="20,16"
+                                    Margin="0,0,0,28"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="OnDolbyMasterToggleClick">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Enable Dolby Spatial Audio"
+                                                   Foreground="#FFFFFF"
+                                                   FontSize="14.5"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock Text="Activates real-time 3D soundstage widening, equalizer curves, and dynamic volume leveling."
+                                                   Foreground="#8A8A96"
+                                                   FontSize="12"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+
+                                    <!-- Modern Fluent Switch -->
+                                    <Border x:Name="DolbyToggleTrack"
+                                            Grid.Column="1"
+                                            Width="48"
+                                            Height="26"
+                                            CornerRadius="13"
+                                            Background="#2A2A34"
+                                            VerticalAlignment="Center"
+                                            Padding="3">
+                                        <Ellipse x:Name="DolbyToggleThumb"
+                                                 Width="20"
+                                                 Height="20"
+                                                 Fill="#FFFFFF"
+                                                 HorizontalAlignment="Left" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Sub-Heading 1: Output Device -->
+                            <TextBlock Text="Target Device Optimization"
+                                       Foreground="#FFFFFF"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Select your audio output so the equalizer applies appropriate frequency limits and acoustic models."
+                                       Foreground="#8A8A96"
+                                       FontSize="12"
+                                       Margin="0,0,0,12" />
+
+                            <Grid Margin="0,0,0,28">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="14" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Headphones Card -->
+                                <Border x:Name="CardHeadphones"
+                                        Grid.Column="0"
+                                        Background="#19151A"
+                                        BorderBrush="#FF0033"
+                                        BorderThickness="1.5"
+                                        CornerRadius="10"
+                                        Padding="16,14"
+                                        Cursor="Hand"
+                                        MouseLeftButtonUp="OnDeviceHeadphonesClick">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Viewbox Width="17" Height="17" Margin="0,0,8,0">
+                                                <Canvas Width="24" Height="24">
+                                                    <Path Data="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"
+                                                          Stroke="#FF0033"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                            <TextBlock Text="Headphones / TWS"
+                                                       Foreground="#FFFFFF"
+                                                       FontSize="13.5"
+                                                       FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text="Delivers full 3D binaural surround sound and rich, deep sub-bass frequencies."
+                                                   Foreground="#9494A0"
+                                                   FontSize="11.5"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Laptop Speakers Card -->
+                                <Border x:Name="CardLaptopSpeakers"
+                                        Grid.Column="2"
+                                        Background="#121217"
+                                        BorderBrush="#21212A"
+                                        BorderThickness="1.5"
+                                        CornerRadius="10"
+                                        Padding="16,14"
+                                        Cursor="Hand"
+                                        MouseLeftButtonUp="OnDeviceLaptopClick">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Viewbox Width="17" Height="17" Margin="0,0,8,0">
+                                                <Canvas Width="24" Height="24">
+                                                    <Path Data="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"
+                                                          Stroke="#9898A4"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                            <TextBlock Text="Laptop Speakers"
+                                                       Foreground="#FFFFFF"
+                                                       FontSize="13.5"
+                                                       FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text="Enhances vocal articulation with built-in anti-clipping filter to protect small speakers."
+                                                   Foreground="#9494A0"
+                                                   FontSize="11.5"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Sub-Heading 2: Sound Profile Presets -->
+                            <TextBlock Text="Sound Profile Preset"
+                                       Foreground="#FFFFFF"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Choose a tuned acoustic signature for your music genre."
+                                       Foreground="#8A8A96"
+                                       FontSize="12"
+                                       Margin="0,0,0,12" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,28">
+                                <Button x:Name="PresetMusicBtn" Content="Music (Balanced)" Style="{StaticResource FluentPresetPillStyle}" Click="OnPresetMusicClick" />
+                                <Button x:Name="PresetCinemaBtn" Content="Cinema 3D" Style="{StaticResource FluentPresetPillStyle}" Click="OnPresetCinemaClick" />
+                                <Button x:Name="PresetBassBtn" Content="Bass Boost" Style="{StaticResource FluentPresetPillStyle}" Click="OnPresetBassClick" />
+                                <Button x:Name="PresetVocalBtn" Content="Vocal Clarity" Style="{StaticResource FluentPresetPillStyle}" Click="OnPresetVocalClick" />
+                                <Button x:Name="PresetDynamicBtn" Content="Dynamic" Style="{StaticResource FluentPresetPillStyle}" Click="OnPresetDynamicClick" />
+                            </StackPanel>
+
+                            <!-- Sub-Heading 3: Fine-Tuning Equalizer Sliders -->
+                            <TextBlock Text="Custom Equalizer &amp; Soundstage"
+                                       Foreground="#FFFFFF"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Fine-tune your acoustic parameters in real time."
+                                       Foreground="#8A8A96"
+                                       FontSize="12"
+                                       Margin="0,0,0,12" />
+
+                            <Border Background="#121217"
+                                    BorderBrush="#21212A"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="20,18">
+                                <StackPanel>
+                                    <!-- Slider 1: 3D Surround Width -->
+                                    <Grid Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="3D Spatial Width" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" />
+                                            <TextBlock Text=" • Expands the soundstage outside your head" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="SurroundValueText" Text="70%" Foreground="#FF0033" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider x:Name="SurroundSlider"
+                                            Style="{StaticResource FluentSettingsSliderStyle}"
+                                            Value="70"
+                                            Margin="0,0,0,16"
+                                            ValueChanged="OnDspSliderValueChanged" />
+
+                                    <!-- Slider 2: Bass Enhancer -->
+                                    <Grid Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Bass Depth &amp; Warmth" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" />
+                                            <TextBlock Text=" • Round, deep sub-frequencies" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="BassValueText" Text="65%" Foreground="#FF0033" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider x:Name="BassSlider"
+                                            Style="{StaticResource FluentSettingsSliderStyle}"
+                                            Value="65"
+                                            Margin="0,0,0,16"
+                                            ValueChanged="OnDspSliderValueChanged" />
+
+                                    <!-- Slider 3: Vocal Clarity -->
+                                    <Grid Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Vocal Clarity" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" />
+                                            <TextBlock Text=" • Sharpens vocal presence &amp; high-frequency sheen" Foreground="#7A7A86" FontSize="11.5" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="ClarityValueText" Text="60%" Foreground="#FF0033" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Slider x:Name="ClaritySlider"
+                                            Style="{StaticResource FluentSettingsSliderStyle}"
+                                            Value="60"
+                                            ValueChanged="OnDspSliderValueChanged" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- ================================================= -->
+                        <!-- TAB 2: DYNAMIC ISLAND CONTENT                     -->
+                        <!-- ================================================= -->
+                        <StackPanel x:Name="SettingsPanelIsland" Visibility="Collapsed">
+                            <TextBlock Text="Dynamic Island on Desktop"
+                                       Foreground="#FFFFFF"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Floating desktop media controller with 60/120 FPS VSync Shared-Element Morphing."
+                                       Foreground="#8E8E9A"
+                                       FontSize="13"
+                                       Margin="0,0,0,24" />
+
+                            <!-- Master Toggle Card -->
+                            <Border Background="#121217"
+                                    BorderBrush="#21212A"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="20,16"
+                                    Margin="0,0,0,24"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="OnIslandMasterToggleClick">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Enable Dynamic Island on Desktop"
+                                                   Foreground="#FFFFFF"
+                                                   FontSize="14.5"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock Text="When YouTube Music is minimized or closed, float a compact playback capsule at the top of your desktop."
+                                                   Foreground="#8A8A96"
+                                                   FontSize="12"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+
+                                    <!-- Switch -->
+                                    <Border x:Name="IslandToggleTrack"
+                                            Grid.Column="1"
+                                            Width="48"
+                                            Height="26"
+                                            CornerRadius="13"
+                                            Background="#FF0033"
+                                            VerticalAlignment="Center"
+                                            Padding="3">
+                                        <Ellipse x:Name="IslandToggleThumb"
+                                                 Width="20"
+                                                 Height="20"
+                                                 Fill="#FFFFFF"
+                                                 HorizontalAlignment="Right" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Features List -->
+                            <Border Background="#121217"
+                                    BorderBrush="#21212A"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="22,18">
+                                <StackPanel>
+                                    <TextBlock Text="How Dynamic Island Works"
+                                               Foreground="#FFFFFF"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,12" />
+
+                                    <TextBlock Text="• Desktop-Only Visibility: The Dynamic Island monitors window Z-Order in real-time. It only appears when you are looking at your Windows Desktop ('Show Desktop') and automatically hides whenever you open Edge, Chrome, or any application window."
+                                               Foreground="#A4A4B0"
+                                               FontSize="12.5"
+                                               LineHeight="20"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,12" />
+
+                                    <TextBlock Text="• VSync Spring Morphing: Hover your mouse cursor over the pill to smoothly morph it from a compact capsule (210×36) into an expanded media card (390×172) featuring album art, live 5-bar equalizer visualizer, interactive seek bar, and transport controls."
+                                               Foreground="#A4A4B0"
+                                               FontSize="12.5"
+                                               LineHeight="20"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,12" />
+
+                                    <TextBlock Text="• Silent Background Mode: When disabled, closing or minimizing the app plays audio silently in the Windows System Tray without showing the floating desktop pill."
+                                               Foreground="#8A8A94"
+                                               FontSize="12"
+                                               LineHeight="18"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- ================================================= -->
+                        <!-- TAB 3: ABOUT CONTENT                              -->
+                        <!-- ================================================= -->
+                        <StackPanel x:Name="SettingsPanelAbout" Visibility="Collapsed">
+                            <TextBlock Text="About YouTube Music Desktop"
+                                       Foreground="#FFFFFF"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Native Windows desktop client for YouTube Music."
+                                       Foreground="#8E8E9A"
+                                       FontSize="13"
+                                       Margin="0,0,0,24" />
+
+                            <Border Background="#121217"
+                                    BorderBrush="#21212A"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="24,24"
+                                    Margin="0,0,0,20">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Image Grid.Column="0"
+                                           Source="pack://application:,,,/Assets/ytm.ico"
+                                           Width="64"
+                                           Height="64"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           VerticalAlignment="Top"
+                                           Margin="0,0,22,0" />
+
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="YouTube Music Desktop"
+                                                   Foreground="#FFFFFF"
+                                                   FontSize="18"
+                                                   FontWeight="Bold" />
+                                        <TextBlock Text="Version 1.1.0 • 64-bit Native (.NET 8 WPF &amp; Edge WebView2)"
+                                                   Foreground="#9A9AA6"
+                                                   FontSize="12"
+                                                   Margin="0,4,0,14" />
+
+                                        <TextBlock Text="An authentic YouTube Music desktop client engineered without AI slop. Features an integrated 4-layer ad-block engine, Dolby Spatial Audio DSP with speaker protection, and a desktop Dynamic Island overlay."
+                                                   Foreground="#C0C0CC"
+                                                   FontSize="12.5"
+                                                   LineHeight="20"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,0,0,18" />
+
+                                        <WrapPanel Margin="0,0,0,18">
+                                            <Border Background="#1A1A22" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                                <TextBlock Text="🛡️ 100% Ad-Free (Zero Ads)" Foreground="#E6E6EE" FontSize="11.5" FontWeight="SemiBold" />
+                                            </Border>
+                                            <Border Background="#1A1A22" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                                <TextBlock Text="🎧 Dolby Spatial Audio DSP" Foreground="#E6E6EE" FontSize="11.5" FontWeight="SemiBold" />
+                                            </Border>
+                                            <Border Background="#1A1A22" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                                <TextBlock Text="🏝️ Dynamic Island (Desktop Only)" Foreground="#E6E6EE" FontSize="11.5" FontWeight="SemiBold" />
+                                            </Border>
+                                        </WrapPanel>
+
+                                        <Grid Margin="0,0,0,16">
+                                            <TextBlock Text="Developer" Foreground="#7E7E8A" FontSize="12" VerticalAlignment="Center" />
+                                            <TextBlock Text="Arisa Akiyama" Foreground="#FFFFFF" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </Grid>
+
+                                        <!-- GitHub Button -->
+                                        <Button HorizontalAlignment="Left"
+                                                Cursor="Hand"
+                                                Click="OnOpenGitHubClick">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="GhBorder"
+                                                            Background="#FF0033"
+                                                            CornerRadius="8"
+                                                            Padding="16,10">
+                                                        <TextBlock Text="View on GitHub (ArisaAkiyama/ytm-desktop)"
+                                                                   Foreground="#FFFFFF"
+                                                                   FontSize="12"
+                                                                   FontWeight="Bold" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="GhBorder" Property="Background" Value="#E0002B" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

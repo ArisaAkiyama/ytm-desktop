@@ -409,8 +409,8 @@
     setInterval(emitMediaState, 500);
 
     // =========================================================================
-    // LAYER 5: STUDIO-GRADE DOLBY SPATIAL AUDIO & MID/SIDE DSP ENGINE
-    // True Mid/Side Stereophonic Expander + Transparent Safety Limiter
+    // LAYER 5: DOLBY SPATIAL AUDIO & EQUALIZER DSP ENGINE (Web Audio API)
+    // Supports Headphone 3D Virtual Surround & Laptop Speaker Protection
     // =========================================================================
     let audioCtx = null;
     let connectedVideo = null;
@@ -418,7 +418,7 @@
     let currentAudioSettings = {
         dolbyEnabled: false,
         dolbyDeviceMode: 'Headphones',
-        dolbyPreset: 'Balanced',
+        dolbyPreset: 'Music',
         surroundLevel: 70,
         bassLevel: 65,
         clarityLevel: 60
@@ -450,113 +450,96 @@
                 const wetGain = audioCtx.createGain();
                 wetGain.gain.value = 0.0;
 
-                // 1. High-Pass Speaker Protection Filter
+                // 1. High-Pass Speaker Protection Filter (prevents laptop speaker rattle)
                 const hpFilter = audioCtx.createBiquadFilter();
                 hpFilter.type = 'highpass';
-                hpFilter.frequency.value = 22;
+                hpFilter.frequency.value = 24;
                 hpFilter.Q.value = 0.707;
 
-                // 2. Sub-Bass Warmth (58 Hz LowShelf)
+                // 2. Deep Sub-Bass Warmth (62 Hz LowShelf)
                 const subBassFilter = audioCtx.createBiquadFilter();
                 subBassFilter.type = 'lowshelf';
-                subBassFilter.frequency.value = 58;
+                subBassFilter.frequency.value = 62;
                 subBassFilter.gain.value = 0;
 
-                // 3. Upper-Bass Punch (140 Hz Peaking)
+                // 3. Upper-Bass Punch & Body (145 Hz Peaking)
                 const upperBassFilter = audioCtx.createBiquadFilter();
                 upperBassFilter.type = 'peaking';
-                upperBassFilter.frequency.value = 140;
-                upperBassFilter.Q.value = 1.0;
+                upperBassFilter.frequency.value = 145;
+                upperBassFilter.Q.value = 1.05;
                 upperBassFilter.gain.value = 0;
 
-                // 4. Vocal Presence & Clarity (2800 Hz Peaking)
+                // 4. Vocal Presence & Articulation (2750 Hz Peaking)
                 const vocalFilter = audioCtx.createBiquadFilter();
                 vocalFilter.type = 'peaking';
-                vocalFilter.frequency.value = 2800;
-                vocalFilter.Q.value = 0.9;
+                vocalFilter.frequency.value = 2750;
+                vocalFilter.Q.value = 0.95;
                 vocalFilter.gain.value = 0;
 
-                // 5. Studio Air & Sparkle (10500 Hz HighShelf)
+                // 5. Studio Air & Brilliance (9500 Hz HighShelf)
                 const airFilter = audioCtx.createBiquadFilter();
                 airFilter.type = 'highshelf';
-                airFilter.frequency.value = 10500;
+                airFilter.frequency.value = 9500;
                 airFilter.gain.value = 0;
 
-                // 6. Mid/Side Stereophonic Spatial Matrix
-                // Extracts Mid (Center/Vocals) & Side (Stereo Ambiance) cleanly with zero phase cancellation
+                // 6. 3D Spatial Soundstage Matrix (Stereo Widener + Haas Crossfeed)
                 const splitter = audioCtx.createChannelSplitter(2);
                 const merger = audioCtx.createChannelMerger(2);
 
-                const lToMid = audioCtx.createGain();
-                const rToMid = audioCtx.createGain();
-                const lToSide = audioCtx.createGain();
-                const rToSide = audioCtx.createGain();
+                const leftDirect = audioCtx.createGain();
+                const rightDirect = audioCtx.createGain();
+                const leftCrossDelay = audioCtx.createDelay(0.02);
+                const rightCrossDelay = audioCtx.createDelay(0.02);
+                const leftCrossGain = audioCtx.createGain();
+                const rightCrossGain = audioCtx.createGain();
 
-                lToMid.gain.value = 0.5;
-                rToMid.gain.value = 0.5;
-                lToSide.gain.value = 0.5;
-                rToSide.gain.value = -0.5; // L - R
+                leftDirect.gain.value = 1.0;
+                rightDirect.gain.value = 1.0;
+                leftCrossDelay.delayTime.value = 0.00068;
+                rightCrossDelay.delayTime.value = 0.00068;
+                leftCrossGain.gain.value = -0.22;
+                rightCrossGain.gain.value = -0.22;
 
-                const midGain = audioCtx.createGain();
-                const sideGain = audioCtx.createGain();
-                midGain.gain.value = 1.0;
-                sideGain.gain.value = 1.25;
+                // 7. Dolby Volume Leveler & Anti-Clipping Limiter
+                const compressor = audioCtx.createDynamicsCompressor();
+                compressor.threshold.value = -15;
+                compressor.knee.value = 16;
+                compressor.ratio.value = 3.2;
+                compressor.attack.value = 0.003;
+                compressor.release.value = 0.18;
 
-                const midToL = audioCtx.createGain();
-                const midToR = audioCtx.createGain();
-                const sideToL = audioCtx.createGain();
-                const sideToR = audioCtx.createGain();
+                const makeupGain = audioCtx.createGain();
+                makeupGain.gain.value = 1.12;
 
-                midToL.gain.value = 1.0;
-                midToR.gain.value = 1.0;
-                sideToL.gain.value = 1.0;
-                sideToR.gain.value = -1.0; // Decode back: L = M + S, R = M - S
-
-                // 7. Transparent Safety Peak Limiter (Never squashes normal dynamics)
-                const limiter = audioCtx.createDynamicsCompressor();
-                limiter.threshold.value = -1.2;
-                limiter.knee.value = 3.0;
-                limiter.ratio.value = 16.0;
-                limiter.attack.value = 0.002;
-                limiter.release.value = 0.08;
-
-                // Connect Dry Bypass
+                // Connect Dry Path
                 source.connect(dryGain);
                 dryGain.connect(audioCtx.destination);
 
-                // Connect Wet Pre-EQ
+                // Connect Wet DSP Chain
                 source.connect(hpFilter);
                 hpFilter.connect(subBassFilter);
                 subBassFilter.connect(upperBassFilter);
                 upperBassFilter.connect(vocalFilter);
                 vocalFilter.connect(airFilter);
-
-                // Feed into Mid/Side Splitter
                 airFilter.connect(splitter);
 
-                splitter.connect(lToMid, 0);
-                splitter.connect(rToMid, 1);
-                splitter.connect(lToSide, 0);
-                splitter.connect(rToSide, 1);
+                // Left (0) & Right (1) Spatial Cross-Matrix
+                splitter.connect(leftDirect, 0);
+                splitter.connect(rightDirect, 1);
+                splitter.connect(leftCrossDelay, 0);
+                splitter.connect(rightCrossDelay, 1);
+                leftCrossDelay.connect(leftCrossGain);
+                rightCrossDelay.connect(rightCrossGain);
 
-                lToMid.connect(midGain);
-                rToMid.connect(midGain);
-                lToSide.connect(sideGain);
-                rToSide.connect(sideGain);
+                leftDirect.connect(merger, 0, 0);
+                rightCrossGain.connect(merger, 0, 0);
 
-                midGain.connect(midToL);
-                midGain.connect(midToR);
-                sideGain.connect(sideToL);
-                sideGain.connect(sideToR);
+                rightDirect.connect(merger, 0, 1);
+                leftCrossGain.connect(merger, 0, 1);
 
-                midToL.connect(merger, 0, 0);
-                sideToL.connect(merger, 0, 0);
-
-                midToR.connect(merger, 0, 1);
-                sideToR.connect(merger, 0, 1);
-
-                merger.connect(limiter);
-                limiter.connect(wetGain);
+                merger.connect(compressor);
+                compressor.connect(makeupGain);
+                makeupGain.connect(wetGain);
                 wetGain.connect(audioCtx.destination);
 
                 connectedVideo = video;
@@ -568,9 +551,14 @@
                     upperBassFilter,
                     vocalFilter,
                     airFilter,
-                    midGain,
-                    sideGain,
-                    limiter
+                    leftDirect,
+                    rightDirect,
+                    leftCrossDelay,
+                    rightCrossDelay,
+                    leftCrossGain,
+                    rightCrossGain,
+                    compressor,
+                    makeupGain
                 };
             }
 
@@ -601,7 +589,7 @@
             }
 
             const isLaptop = cfg.dolbyDeviceMode === 'LaptopSpeakers';
-            const preset = cfg.dolbyPreset || 'Balanced';
+            const preset = cfg.dolbyPreset || 'Music';
             const sNorm = Math.max(0, Math.min(100, Number(cfg.surroundLevel) ?? 70)) / 100.0;
             const bNorm = Math.max(0, Math.min(100, Number(cfg.bassLevel) ?? 65)) / 100.0;
             const cNorm = Math.max(0, Math.min(100, Number(cfg.clarityLevel) ?? 60)) / 100.0;
@@ -613,8 +601,8 @@
 
             switch (preset) {
                 case 'Cinema':
-                    presetSpatialBoost = 1.30;
-                    presetSubBoost = 1.25;
+                    presetSpatialBoost = 1.35;
+                    presetSubBoost = 1.2;
                     presetVocalBoost = 1.15;
                     break;
                 case 'BassBoost':
@@ -624,48 +612,52 @@
                     break;
                 case 'Vocal':
                     presetVocalBoost = 1.45;
-                    presetSubBoost = 0.70;
-                    presetPunchBoost = 0.80;
-                    presetSpatialBoost = 0.90;
+                    presetSubBoost = 0.65;
+                    presetPunchBoost = 0.8;
                     break;
-                default: // 'Balanced'
-                    presetSubBoost = 1.10;
-                    presetPunchBoost = 1.10;
-                    presetVocalBoost = 1.10;
-                    presetSpatialBoost = 1.10;
+                case 'Dynamic':
+                    presetSubBoost = 1.15;
+                    presetPunchBoost = 1.15;
+                    presetVocalBoost = 1.2;
+                    presetSpatialBoost = 1.15;
+                    break;
+                default: // 'Music'
+                    presetSubBoost = 1.1;
+                    presetPunchBoost = 1.1;
+                    presetVocalBoost = 1.05;
+                    presetSpatialBoost = 1.05;
                     break;
             }
 
-            // 1. High-pass protection (prevents speaker rattle on laptop speakers)
+            // 1. High-pass protection for small laptop speakers vs full-range headphones
             const hpFreq = isLaptop ? 85 : 22;
             dspNodes.hpFilter.frequency.setTargetAtTime(hpFreq, now, tc);
 
-            // 2. Sub-Bass & Punch
+            // 2. Sub-Bass (62Hz) & Upper-Bass Punch (145Hz)
             const subGainDb = isLaptop ? 0.0 : (bNorm * 7.5 * presetSubBoost);
             const punchGainDb = isLaptop
-                ? (bNorm * 5.0 * presetPunchBoost)
-                : (bNorm * 4.0 * presetPunchBoost);
+                ? (bNorm * 5.2 * presetPunchBoost)
+                : (bNorm * 4.2 * presetPunchBoost);
 
             dspNodes.subBassFilter.gain.setTargetAtTime(subGainDb, now, tc);
             dspNodes.upperBassFilter.gain.setTargetAtTime(punchGainDb, now, tc);
 
-            // 3. Vocal Presence & Studio Air
-            const vocalGainDb = (cNorm * 4.5 * presetVocalBoost) + (isLaptop ? 1.0 : 0.0);
-            const airGainDb = cNorm * 4.0;
+            // 3. Vocal Presence (2.75kHz) & Studio Air (9.5kHz)
+            const vocalGainDb = (cNorm * 4.8 * presetVocalBoost) + (isLaptop ? 1.2 : 0.0);
+            const airGainDb = cNorm * 3.8;
             dspNodes.vocalFilter.gain.setTargetAtTime(vocalGainDb, now, tc);
             dspNodes.airFilter.gain.setTargetAtTime(airGainDb, now, tc);
 
-            // 4. True Mid/Side Stereo Expander
-            // Keeps Center (vocals/kick) 100% solid while opening the Side soundstage wide
-            const sideWidth = 0.85 + (sNorm * 0.90 * presetSpatialBoost); // 0.85 to 1.75
-            dspNodes.midGain.gain.setTargetAtTime(1.0, now, tc);
-            dspNodes.sideGain.gain.setTargetAtTime(sideWidth, now, tc);
+            // 4. 3D Spatial Surround Matrix
+            const effectiveSurround = Math.min(1.0, sNorm * presetSpatialBoost);
+            const crossAmount = -(0.10 + effectiveSurround * (isLaptop ? 0.24 : 0.34));
+            const directBoost = 1.0 + (effectiveSurround * 0.16);
+            const delaySec = isLaptop ? 0.00048 : 0.00072;
 
-            // Activate Wet DSP Chain smoothly
-            dspNodes.dryGain.gain.setTargetAtTime(0.0, now, tc);
-            dspNodes.wetGain.gain.setTargetAtTime(1.0, now, tc);
-        } catch (_) { }
-    }
+            dspNodes.leftDirect.gain.setTargetAtTime(directBoost, now, tc);
+            dspNodes.rightDirect.gain.setTargetAtTime(directBoost, now, tc);
+            dspNodes.leftCrossDelay.delayTime.setTargetAtTime(delaySec, now, tc);
+            dspNodes.rightCrossDelay.delayTime.setTargetAtTime(delaySec, now, tc);
             dspNodes.leftCrossGain.gain.setTargetAtTime(crossAmount, now, tc);
             dspNodes.rightCrossGain.gain.setTargetAtTime(crossAmount, now, tc);
 
