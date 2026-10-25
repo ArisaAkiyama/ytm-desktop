@@ -509,6 +509,11 @@ public partial class MainWindow : Window
             _systemTrayService.UpdateTrackTooltip(_currentDocumentTitle);
         };
 
+        coreWv.DOMContentLoaded += async (_, _) =>
+        {
+            await PushAudioSettingsToWebViewAsync();
+        };
+
         coreWv.NavigationCompleted += async (_, _) =>
         {
             await PushAudioSettingsToWebViewAsync();
