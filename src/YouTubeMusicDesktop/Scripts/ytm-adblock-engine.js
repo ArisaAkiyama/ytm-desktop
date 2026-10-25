@@ -397,7 +397,7 @@
 
             window.chrome.webview.postMessage(JSON.stringify({
                 title: title || 'YouTube Music',
-                artist: artist || 'Pilih lagu untuk memutar',
+                artist: artist || 'Select a song to play',
                 albumArt: albumArt,
                 isPlaying: isPlaying,
                 currentTime: currentTime,
@@ -407,6 +407,290 @@
     }
 
     setInterval(emitMediaState, 500);
+
+    // =========================================================================
+    // LAYER 5: STUDIO-GRADE DOLBY SPATIAL AUDIO & MID/SIDE DSP ENGINE
+    // True Mid/Side Stereophonic Expander + Transparent Safety Limiter
+    // =========================================================================
+    let audioCtx = null;
+    let connectedVideo = null;
+    let dspNodes = null;
+    let currentAudioSettings = {
+        dolbyEnabled: false,
+        dolbyDeviceMode: 'Headphones',
+        dolbyPreset: 'Balanced',
+        surroundLevel: 70,
+        bassLevel: 65,
+        clarityLevel: 60
+    };
+
+    function ensureDolbyAudioGraph() {
+        try {
+            const video = document.querySelector('video.html5-main-video, video.video-stream');
+            if (!video) return false;
+
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return false;
+                audioCtx = new AudioContextClass({ latencyHint: 'interactive' });
+            }
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => { });
+            }
+
+            if (connectedVideo !== video || !dspNodes) {
+                const source = audioCtx.createMediaElementSource(video);
+
+                // Dry (Bypass) path
+                const dryGain = audioCtx.createGain();
+                dryGain.gain.value = 1.0;
+
+                // Wet (Dolby DSP) path
+                const wetGain = audioCtx.createGain();
+                wetGain.gain.value = 0.0;
+
+                // 1. High-Pass Speaker Protection Filter
+                const hpFilter = audioCtx.createBiquadFilter();
+                hpFilter.type = 'highpass';
+                hpFilter.frequency.value = 22;
+                hpFilter.Q.value = 0.707;
+
+                // 2. Sub-Bass Warmth (58 Hz LowShelf)
+                const subBassFilter = audioCtx.createBiquadFilter();
+                subBassFilter.type = 'lowshelf';
+                subBassFilter.frequency.value = 58;
+                subBassFilter.gain.value = 0;
+
+                // 3. Upper-Bass Punch (140 Hz Peaking)
+                const upperBassFilter = audioCtx.createBiquadFilter();
+                upperBassFilter.type = 'peaking';
+                upperBassFilter.frequency.value = 140;
+                upperBassFilter.Q.value = 1.0;
+                upperBassFilter.gain.value = 0;
+
+                // 4. Vocal Presence & Clarity (2800 Hz Peaking)
+                const vocalFilter = audioCtx.createBiquadFilter();
+                vocalFilter.type = 'peaking';
+                vocalFilter.frequency.value = 2800;
+                vocalFilter.Q.value = 0.9;
+                vocalFilter.gain.value = 0;
+
+                // 5. Studio Air & Sparkle (10500 Hz HighShelf)
+                const airFilter = audioCtx.createBiquadFilter();
+                airFilter.type = 'highshelf';
+                airFilter.frequency.value = 10500;
+                airFilter.gain.value = 0;
+
+                // 6. Mid/Side Stereophonic Spatial Matrix
+                // Extracts Mid (Center/Vocals) & Side (Stereo Ambiance) cleanly with zero phase cancellation
+                const splitter = audioCtx.createChannelSplitter(2);
+                const merger = audioCtx.createChannelMerger(2);
+
+                const lToMid = audioCtx.createGain();
+                const rToMid = audioCtx.createGain();
+                const lToSide = audioCtx.createGain();
+                const rToSide = audioCtx.createGain();
+
+                lToMid.gain.value = 0.5;
+                rToMid.gain.value = 0.5;
+                lToSide.gain.value = 0.5;
+                rToSide.gain.value = -0.5; // L - R
+
+                const midGain = audioCtx.createGain();
+                const sideGain = audioCtx.createGain();
+                midGain.gain.value = 1.0;
+                sideGain.gain.value = 1.25;
+
+                const midToL = audioCtx.createGain();
+                const midToR = audioCtx.createGain();
+                const sideToL = audioCtx.createGain();
+                const sideToR = audioCtx.createGain();
+
+                midToL.gain.value = 1.0;
+                midToR.gain.value = 1.0;
+                sideToL.gain.value = 1.0;
+                sideToR.gain.value = -1.0; // Decode back: L = M + S, R = M - S
+
+                // 7. Transparent Safety Peak Limiter (Never squashes normal dynamics)
+                const limiter = audioCtx.createDynamicsCompressor();
+                limiter.threshold.value = -1.2;
+                limiter.knee.value = 3.0;
+                limiter.ratio.value = 16.0;
+                limiter.attack.value = 0.002;
+                limiter.release.value = 0.08;
+
+                // Connect Dry Bypass
+                source.connect(dryGain);
+                dryGain.connect(audioCtx.destination);
+
+                // Connect Wet Pre-EQ
+                source.connect(hpFilter);
+                hpFilter.connect(subBassFilter);
+                subBassFilter.connect(upperBassFilter);
+                upperBassFilter.connect(vocalFilter);
+                vocalFilter.connect(airFilter);
+
+                // Feed into Mid/Side Splitter
+                airFilter.connect(splitter);
+
+                splitter.connect(lToMid, 0);
+                splitter.connect(rToMid, 1);
+                splitter.connect(lToSide, 0);
+                splitter.connect(rToSide, 1);
+
+                lToMid.connect(midGain);
+                rToMid.connect(midGain);
+                lToSide.connect(sideGain);
+                rToSide.connect(sideGain);
+
+                midGain.connect(midToL);
+                midGain.connect(midToR);
+                sideGain.connect(sideToL);
+                sideGain.connect(sideToR);
+
+                midToL.connect(merger, 0, 0);
+                sideToL.connect(merger, 0, 0);
+
+                midToR.connect(merger, 0, 1);
+                sideToR.connect(merger, 0, 1);
+
+                merger.connect(limiter);
+                limiter.connect(wetGain);
+                wetGain.connect(audioCtx.destination);
+
+                connectedVideo = video;
+                dspNodes = {
+                    dryGain,
+                    wetGain,
+                    hpFilter,
+                    subBassFilter,
+                    upperBassFilter,
+                    vocalFilter,
+                    airFilter,
+                    midGain,
+                    sideGain,
+                    limiter
+                };
+            }
+
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function updateDolbyDspParameters() {
+        try {
+            const cfg = currentAudioSettings;
+            if (!cfg.dolbyEnabled && !dspNodes) {
+                return;
+            }
+
+            if (!ensureDolbyAudioGraph() || !dspNodes || !audioCtx) {
+                return;
+            }
+
+            const now = audioCtx.currentTime;
+            const tc = 0.035;
+
+            if (!cfg.dolbyEnabled) {
+                dspNodes.dryGain.gain.setTargetAtTime(1.0, now, tc);
+                dspNodes.wetGain.gain.setTargetAtTime(0.0, now, tc);
+                return;
+            }
+
+            const isLaptop = cfg.dolbyDeviceMode === 'LaptopSpeakers';
+            const preset = cfg.dolbyPreset || 'Balanced';
+            const sNorm = Math.max(0, Math.min(100, Number(cfg.surroundLevel) ?? 70)) / 100.0;
+            const bNorm = Math.max(0, Math.min(100, Number(cfg.bassLevel) ?? 65)) / 100.0;
+            const cNorm = Math.max(0, Math.min(100, Number(cfg.clarityLevel) ?? 60)) / 100.0;
+
+            let presetSubBoost = 1.0;
+            let presetPunchBoost = 1.0;
+            let presetVocalBoost = 1.0;
+            let presetSpatialBoost = 1.0;
+
+            switch (preset) {
+                case 'Cinema':
+                    presetSpatialBoost = 1.30;
+                    presetSubBoost = 1.25;
+                    presetVocalBoost = 1.15;
+                    break;
+                case 'BassBoost':
+                    presetSubBoost = 1.45;
+                    presetPunchBoost = 1.35;
+                    presetSpatialBoost = 0.95;
+                    break;
+                case 'Vocal':
+                    presetVocalBoost = 1.45;
+                    presetSubBoost = 0.70;
+                    presetPunchBoost = 0.80;
+                    presetSpatialBoost = 0.90;
+                    break;
+                default: // 'Balanced'
+                    presetSubBoost = 1.10;
+                    presetPunchBoost = 1.10;
+                    presetVocalBoost = 1.10;
+                    presetSpatialBoost = 1.10;
+                    break;
+            }
+
+            // 1. High-pass protection (prevents speaker rattle on laptop speakers)
+            const hpFreq = isLaptop ? 85 : 22;
+            dspNodes.hpFilter.frequency.setTargetAtTime(hpFreq, now, tc);
+
+            // 2. Sub-Bass & Punch
+            const subGainDb = isLaptop ? 0.0 : (bNorm * 7.5 * presetSubBoost);
+            const punchGainDb = isLaptop
+                ? (bNorm * 5.0 * presetPunchBoost)
+                : (bNorm * 4.0 * presetPunchBoost);
+
+            dspNodes.subBassFilter.gain.setTargetAtTime(subGainDb, now, tc);
+            dspNodes.upperBassFilter.gain.setTargetAtTime(punchGainDb, now, tc);
+
+            // 3. Vocal Presence & Studio Air
+            const vocalGainDb = (cNorm * 4.5 * presetVocalBoost) + (isLaptop ? 1.0 : 0.0);
+            const airGainDb = cNorm * 4.0;
+            dspNodes.vocalFilter.gain.setTargetAtTime(vocalGainDb, now, tc);
+            dspNodes.airFilter.gain.setTargetAtTime(airGainDb, now, tc);
+
+            // 4. True Mid/Side Stereo Expander
+            // Keeps Center (vocals/kick) 100% solid while opening the Side soundstage wide
+            const sideWidth = 0.85 + (sNorm * 0.90 * presetSpatialBoost); // 0.85 to 1.75
+            dspNodes.midGain.gain.setTargetAtTime(1.0, now, tc);
+            dspNodes.sideGain.gain.setTargetAtTime(sideWidth, now, tc);
+
+            // Activate Wet DSP Chain smoothly
+            dspNodes.dryGain.gain.setTargetAtTime(0.0, now, tc);
+            dspNodes.wetGain.gain.setTargetAtTime(1.0, now, tc);
+        } catch (_) { }
+    }
+            dspNodes.leftCrossGain.gain.setTargetAtTime(crossAmount, now, tc);
+            dspNodes.rightCrossGain.gain.setTargetAtTime(crossAmount, now, tc);
+
+            // 5. Anti-Clipping Compressor & Makeup Leveler
+            dspNodes.compressor.threshold.setTargetAtTime(isLaptop ? -17 : -14, now, tc);
+            dspNodes.compressor.ratio.setTargetAtTime(isLaptop ? 4.2 : 3.0, now, tc);
+            dspNodes.makeupGain.gain.setTargetAtTime(isLaptop ? 1.18 : 1.12, now, tc);
+
+            // Activate Wet DSP Chain smoothly
+            dspNodes.dryGain.gain.setTargetAtTime(0.0, now, tc);
+            dspNodes.wetGain.gain.setTargetAtTime(1.0, now, tc);
+        } catch (_) { }
+    }
+
+    // Re-verify audio graph if YouTube Music recreates the <video> element
+    setInterval(() => {
+        if (currentAudioSettings.dolbyEnabled) {
+            const video = document.querySelector('video.html5-main-video, video.video-stream');
+            if (video && video !== connectedVideo) {
+                updateDolbyDspParameters();
+            } else if (audioCtx && audioCtx.state === 'suspended' && video && !video.paused) {
+                audioCtx.resume().catch(() => { });
+            }
+        }
+    }, 1500);
 
     window.__ytmDesktopControl = {
         playPause: function () {
@@ -444,6 +728,11 @@
                 video.currentTime = video.duration * clamped;
                 setTimeout(emitMediaState, 50);
             }
+        },
+        applyAudioSettings: function (settings) {
+            if (!settings || typeof settings !== 'object') return;
+            currentAudioSettings = Object.assign({}, currentAudioSettings, settings);
+            updateDolbyDspParameters();
         }
     };
 })();

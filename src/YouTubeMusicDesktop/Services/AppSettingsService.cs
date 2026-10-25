@@ -1,0 +1,68 @@
+using System.IO;
+using System.Text.Json;
+using YouTubeMusicDesktop.Models;
+
+namespace YouTubeMusicDesktop.Services;
+
+public sealed class AppSettingsService
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true
+    };
+
+    private readonly string _settingsFilePath;
+
+    public AppSettings Current { get; private set; }
+
+    public AppSettingsService()
+    {
+        string appFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "YouTubeMusicDesktop");
+
+        Directory.CreateDirectory(appFolder);
+        _settingsFilePath = Path.Combine(appFolder, "settings.json");
+        Current = Load();
+    }
+
+    public AppSettings Load()
+    {
+        try
+        {
+            if (File.Exists(_settingsFilePath))
+            {
+                string json = File.ReadAllText(_settingsFilePath);
+                AppSettings? loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
+                if (loaded is not null)
+                {
+                    Current = loaded;
+                    return Current;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to default settings if file is corrupted
+        }
+
+        Current = new AppSettings();
+        return Current;
+    }
+
+    public void Save(AppSettings settings)
+    {
+        Current = settings.Clone();
+        try
+        {
+            string json = JsonSerializer.Serialize(Current, JsonOptions);
+            File.WriteAllText(_settingsFilePath, json);
+        }
+        catch
+        {
+            // Ignore transient IO lock errors
+        }
+    }
+
+    public string ToJson() => JsonSerializer.Serialize(Current);
+}

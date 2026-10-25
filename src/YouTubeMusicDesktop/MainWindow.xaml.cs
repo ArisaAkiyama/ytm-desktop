@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Microsoft.Win32;
 using Microsoft.Web.WebView2.Core;
 using YouTubeMusicDesktop.Interop;
@@ -11,16 +12,21 @@ using YouTubeMusicDesktop.Models;
 using YouTubeMusicDesktop.Services;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
+using Point = System.Windows.Point;
 
 namespace YouTubeMusicDesktop;
 
 public partial class MainWindow : Window
 {
     private const string YouTubeMusicUrl = "https://music.youtube.com";
+    private const string MaximizeGeometryData = "M 0.5,0.5 L 9.5,0.5 L 9.5,9.5 L 0.5,9.5 Z";
+    private const string RestoreGeometryData = "M 2.5,0.5 L 9.5,0.5 L 9.5,7.5 L 7.5,7.5 M 0.5,2.5 L 7.5,2.5 L 7.5,9.5 L 0.5,9.5 Z";
 
     private readonly AdBlockService _adBlockService = new();
+    private readonly AppSettingsService _settingsService = new();
     private readonly SystemTrayService _systemTrayService;
     private readonly DynamicIslandWindow _dynamicIsland;
+    private SettingsWindow? _settingsWindow;
     private bool _isExplicitExit;
 
     public MainWindow()
@@ -37,9 +43,13 @@ public partial class MainWindow : Window
             restoreMainWindowAction: () => Dispatcher.Invoke(RestoreFromTray),
             executeMediaCommandAsync: ExecutePlayerCommandAsync);
 
+        UpdateHeaderIndicators(_settingsService.Current);
+        UpdateTitleBarStateVisuals();
+
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
         StateChanged += OnWindowStateChanged;
+        LocationChanged += (_, _) => _settingsWindow?.Hide();
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
     }
 
@@ -73,17 +83,155 @@ public partial class MainWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         NativeMethods.ApplyDarkTitleBar(this);
+        UpdateTitleBarStateVisuals();
     }
 
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
+        UpdateTitleBarStateVisuals();
+        _settingsWindow?.Hide();
+
         if (WindowState == WindowState.Minimized)
         {
-            _dynamicIsland.ShowIsland();
+            if (_settingsService.Current.DynamicIslandEnabled)
+            {
+                _dynamicIsland.ShowIsland();
+            }
+            else
+            {
+                _dynamicIsland.HideIsland();
+            }
         }
         else
         {
             _dynamicIsland.HideIsland();
+        }
+    }
+
+    private void UpdateTitleBarStateVisuals()
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            RootLayoutGrid.Margin = new Thickness(7);
+            MaxRestoreIconPath.Data = Geometry.Parse(RestoreGeometryData);
+        }
+        else
+        {
+            RootLayoutGrid.Margin = new Thickness(0);
+            MaxRestoreIconPath.Data = Geometry.Parse(MaximizeGeometryData);
+        }
+    }
+
+    private void UpdateHeaderIndicators(AppSettings settings)
+    {
+        DolbyHeaderIndicatorDot.Visibility = settings.DolbyEnabled
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnSettingsButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow(_settingsService, OnAppSettingsUpdated)
+            {
+                Owner = this
+            };
+        }
+
+        if (_settingsWindow.IsVisible)
+        {
+            _settingsWindow.Hide();
+            return;
+        }
+
+        _settingsWindow.SyncUiFromSettings(_settingsService.Current);
+
+        // Position the Settings Flyout directly below the Settings button (aligned right)
+        try
+        {
+            Point btnBottomRight = SettingsTitleBarButton.PointToScreen(
+                new Point(SettingsTitleBarButton.ActualWidth, SettingsTitleBarButton.ActualHeight));
+
+            PresentationSource? source = PresentationSource.FromVisual(this);
+            double dpiX = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+            double dpiY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+
+            double dipRight = btnBottomRight.X / dpiX;
+            double dipBottom = btnBottomRight.Y / dpiY;
+
+            Rect workArea = SystemParameters.WorkArea;
+            double targetLeft = Math.Clamp(
+                dipRight - _settingsWindow.Width + 8,
+                workArea.Left + 8,
+                workArea.Right - _settingsWindow.Width - 8);
+            double winHeight = _settingsWindow.ActualHeight > 0 ? _settingsWindow.ActualHeight : 390;
+            double targetTop = Math.Clamp(
+                dipBottom + 2,
+                workArea.Top + 8,
+                workArea.Bottom - winHeight - 8);
+
+            _settingsWindow.Left = targetLeft;
+            _settingsWindow.Top = targetTop;
+        }
+        catch
+        {
+            _settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
+    }
+
+    private void OnMinimizeButtonClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void OnMaximizeRestoreButtonClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void OnCloseCaptionButtonClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private async void OnAppSettingsUpdated(AppSettings updated)
+    {
+        UpdateHeaderIndicators(updated);
+
+        if (!updated.DynamicIslandEnabled)
+        {
+            _dynamicIsland.HideIsland();
+        }
+        else if (WindowState == WindowState.Minimized || !IsVisible)
+        {
+            _dynamicIsland.ShowIsland();
+        }
+
+        await PushAudioSettingsToWebViewAsync();
+    }
+
+    private async Task PushAudioSettingsToWebViewAsync()
+    {
+        if (MusicWebView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        string settingsJson = _settingsService.ToJson();
+        try
+        {
+            await MusicWebView.CoreWebView2.ExecuteScriptAsync(
+                $"window.__ytmDesktopControl && window.__ytmDesktopControl.applyAudioSettings({settingsJson});");
+        }
+        catch
+        {
+            // Ignore transient script errors
         }
     }
 
@@ -96,7 +244,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"Gagal menginisialisasi mesin WebView2:\n{ex.Message}",
+                $"Failed to initialize WebView2 engine:\n{ex.Message}",
                 "YouTube Music",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -154,6 +302,11 @@ public partial class MainWindow : Window
             string docTitle = coreWv.DocumentTitle;
             Title = string.IsNullOrWhiteSpace(docTitle) ? "YouTube Music" : docTitle;
             _systemTrayService.UpdateTrackTooltip(docTitle);
+        };
+
+        coreWv.NavigationCompleted += async (_, _) =>
+        {
+            await PushAudioSettingsToWebViewAsync();
         };
 
         coreWv.WebMessageReceived += OnWebMessageReceived;
@@ -280,6 +433,7 @@ public partial class MainWindow : Window
     public void AllowSessionEndingClose()
     {
         _isExplicitExit = true;
+        _settingsWindow?.Close();
         _dynamicIsland.Close();
         _systemTrayService.Dispose();
     }
@@ -287,6 +441,7 @@ public partial class MainWindow : Window
     private void ExitApplication()
     {
         _isExplicitExit = true;
+        _settingsWindow?.Close();
         _dynamicIsland.Close();
         _systemTrayService.Dispose();
         Close();
@@ -297,15 +452,25 @@ public partial class MainWindow : Window
     {
         if (!_isExplicitExit)
         {
-            // Keep music playing in background via System Tray & show Dynamic Island when user clicks 'X'
+            // Keep music playing in background via System Tray & show Dynamic Island (if enabled) when user clicks 'X'
             e.Cancel = true;
+            _settingsWindow?.Hide();
             Hide();
             ShowInTaskbar = false;
-            _dynamicIsland.ShowIsland();
+
+            if (_settingsService.Current.DynamicIslandEnabled)
+            {
+                _dynamicIsland.ShowIsland();
+            }
+            else
+            {
+                _dynamicIsland.HideIsland();
+            }
             return;
         }
 
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        _settingsWindow?.Close();
         _dynamicIsland.Close();
         _systemTrayService.Dispose();
         base.OnClosing(e);
