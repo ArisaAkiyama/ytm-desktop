@@ -145,6 +145,67 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Full-Width Clickable Button (Transparent Host for Toggle Rows) -->
+        <Style x:Key="PlainClickableBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sidebar Navigation Button Style -->
+        <Style x:Key="MonoNavBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Monochromatic Device Selection Card Style -->
+        <Style x:Key="MonoDeviceCardBtnStyle" TargetType="Button">
+            <Setter Property="Width" Value="56" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="BorderThickness" Value="1.2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid x:Name="RootLayoutGrid" Background="#000000">
@@ -268,7 +329,8 @@
             <!-- 2. Full-Screen Settings View (Pure Monochromatic Black & White, Responsive Stretch) -->
             <Grid x:Name="SettingsOverlayGrid"
                   Background="#0E0E11"
-                  Visibility="Collapsed">
+                  Visibility="Collapsed"
+                  Focusable="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="220" />
                     <ColumnDefinition Width="*" />
@@ -299,48 +361,41 @@
                         <!-- Nav Items List -->
                         <StackPanel Grid.Row="1">
                             <!-- Nav 1: Audio & Dolby DSP -->
-                            <Border x:Name="NavBtnDolby"
+                            <Button x:Name="NavBtnDolby"
+                                    Style="{StaticResource MonoNavBtnStyle}"
                                     Background="#25252C"
-                                    CornerRadius="6"
-                                    Padding="10,8"
-                                    Margin="0,0,0,3"
-                                    Cursor="Hand"
-                                    MouseLeftButtonUp="OnNavDolbyClick">
+                                    Click="OnNavDolbyClick">
                                 <TextBlock x:Name="NavTxtDolby"
                                            Text="Audio &amp; Dolby DSP"
                                            Foreground="#FFFFFF"
                                            FontSize="13"
                                            FontWeight="Medium" />
-                            </Border>
+                            </Button>
 
                             <!-- Nav 2: Dynamic Island -->
-                            <Border x:Name="NavBtnIsland"
+                            <Button x:Name="NavBtnIsland"
+                                    Style="{StaticResource MonoNavBtnStyle}"
                                     Background="Transparent"
-                                    CornerRadius="6"
-                                    Padding="10,8"
-                                    Margin="0,0,0,3"
-                                    Cursor="Hand"
-                                    MouseLeftButtonUp="OnNavIslandClick">
+                                    Click="OnNavIslandClick">
                                 <TextBlock x:Name="NavTxtIsland"
                                            Text="Dynamic Island"
                                            Foreground="#9494A0"
                                            FontSize="13"
                                            FontWeight="Medium" />
-                            </Border>
+                            </Button>
 
                             <!-- Nav 3: About -->
-                            <Border x:Name="NavBtnAbout"
+                            <Button x:Name="NavBtnAbout"
+                                    Style="{StaticResource MonoNavBtnStyle}"
                                     Background="Transparent"
-                                    CornerRadius="6"
-                                    Padding="10,8"
-                                    Cursor="Hand"
-                                    MouseLeftButtonUp="OnNavAboutClick">
+                                    Margin="0"
+                                    Click="OnNavAboutClick">
                                 <TextBlock x:Name="NavTxtAbout"
                                            Text="About"
                                            Foreground="#9494A0"
                                            FontSize="13"
                                            FontWeight="Medium" />
-                            </Border>
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -399,11 +454,9 @@
                             </Grid>
 
                             <!-- Master Switch Row: Dolby Spatial Audio (Clean, Single Clear Heading) -->
-                            <Border BorderThickness="0"
-                                    Padding="0,0,0,8"
+                            <Button Style="{StaticResource PlainClickableBtnStyle}"
                                     Margin="0,0,0,20"
-                                    Cursor="Hand"
-                                    MouseLeftButtonUp="OnDolbyMasterToggleClick">
+                                    Click="OnDolbyMasterToggleClick">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -436,7 +489,7 @@
                                                  HorizontalAlignment="Right" />
                                     </Border>
                                 </Grid>
-                            </Border>
+                            </Button>
 
                             <!-- Sub-Heading: Target Device -->
                             <TextBlock Text="Target Device Optimization"
@@ -452,17 +505,13 @@
                             <!-- Minimalist Icon-Only Device Selection Buttons -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
                                 <!-- Headphones Button (Icon Only) -->
-                                <Border x:Name="CardHeadphones"
+                                <Button x:Name="CardHeadphones"
+                                        Style="{StaticResource MonoDeviceCardBtnStyle}"
                                         Background="#1E1E24"
                                         BorderBrush="#484854"
-                                        BorderThickness="1.2"
-                                        CornerRadius="6"
-                                        Width="56"
-                                        Height="38"
                                         Margin="0,0,10,0"
-                                        Cursor="Hand"
                                         ToolTip="Headphones / TWS"
-                                        MouseLeftButtonUp="OnDeviceHeadphonesClick">
+                                        Click="OnDeviceHeadphonesClick">
                                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <Canvas Width="24" Height="24">
                                             <Path x:Name="HeadphoneIconPath"
@@ -474,19 +523,15 @@
                                                   StrokeLineJoin="Round" />
                                         </Canvas>
                                     </Viewbox>
-                                </Border>
+                                </Button>
 
                                 <!-- Laptop Speakers Button (Icon Only) -->
-                                <Border x:Name="CardLaptopSpeakers"
+                                <Button x:Name="CardLaptopSpeakers"
+                                        Style="{StaticResource MonoDeviceCardBtnStyle}"
                                         Background="#141418"
                                         BorderBrush="#222227"
-                                        BorderThickness="1.2"
-                                        CornerRadius="6"
-                                        Width="56"
-                                        Height="38"
-                                        Cursor="Hand"
                                         ToolTip="Laptop Speakers"
-                                        MouseLeftButtonUp="OnDeviceLaptopClick">
+                                        Click="OnDeviceLaptopClick">
                                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <Canvas Width="24" Height="24">
                                             <Path x:Name="LaptopIconPath"
@@ -498,7 +543,7 @@
                                                   StrokeLineJoin="Round" />
                                         </Canvas>
                                     </Viewbox>
-                                </Border>
+                                </Button>
                             </StackPanel>
 
                             <!-- Sub-Heading: Sound Profile Preset -->
@@ -533,7 +578,7 @@
                                        Margin="0,0,0,14" />
 
                             <!-- Flat Equalizer Slider Rows (Clean, No Divider Lines) -->
-                            <StackPanel Margin="0,0,0,8">
+                            <StackPanel x:Name="DspSlidersContainer" Margin="0,0,0,8">
                                 <!-- Slider 1: 3D Surround Width -->
                                 <StackPanel Margin="0,0,0,18">
                                     <Grid Margin="0,0,0,6">
@@ -625,11 +670,9 @@
                             </Grid>
 
                             <!-- Master Toggle Row (Clean Flat) -->
-                            <Border BorderThickness="0"
-                                    Padding="0"
+                            <Button Style="{StaticResource PlainClickableBtnStyle}"
                                     Margin="0,0,0,16"
-                                    Cursor="Hand"
-                                    MouseLeftButtonUp="OnIslandMasterToggleClick">
+                                    Click="OnIslandMasterToggleClick">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -662,7 +705,7 @@
                                                  HorizontalAlignment="Right" />
                                     </Border>
                                 </Grid>
-                            </Border>
+                            </Button>
                         </StackPanel>
 
                         <!-- ================================================= -->
@@ -754,7 +797,7 @@
                             <!-- Version Info (Clean Minimalist) -->
                             <Grid Margin="0,0,0,24">
                                 <TextBlock Text="Version" Foreground="#7E7E8A" FontSize="13" VerticalAlignment="Center" />
-                                <TextBlock Text="v1.1.0" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock x:Name="AboutVersionText" Text="v1.0.0" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
                             </Grid>
 
                             <!-- GitHub Action Button (With Official GitHub Octocat SVG Logo) -->

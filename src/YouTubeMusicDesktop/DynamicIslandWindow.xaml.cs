@@ -586,6 +586,28 @@ public partial class DynamicIslandWindow : Window
         }
     }
 
+    private bool _isDisposed;
+
+    public void SafeClose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+        _isDisposed = true;
+        Close();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _isDisposed = true;
+        _desktopVisibilityTimer.Stop();
+        _collapseDebounceTimer.Stop();
+        _autoCollapseToastTimer.Stop();
+        StopVSyncLoop();
+        base.OnClosed(e);
+    }
+
     private void UpdateAlbumArtImage(string url)
     {
         try
@@ -594,6 +616,8 @@ public partial class DynamicIslandWindow : Window
             bitmap.BeginInit();
             bitmap.UriSource = new Uri(url, UriKind.Absolute);
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.DownloadFailed += (_, _) => Dispatcher.InvokeAsync(SetDefaultAlbumArt);
+            bitmap.DecodeFailed += (_, _) => Dispatcher.InvokeAsync(SetDefaultAlbumArt);
             bitmap.EndInit();
 
             SharedAlbumArtImage.Source = bitmap;

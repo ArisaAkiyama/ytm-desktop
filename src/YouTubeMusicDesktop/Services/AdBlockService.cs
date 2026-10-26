@@ -6,6 +6,21 @@ namespace YouTubeMusicDesktop.Services;
 
 public sealed class AdBlockService
 {
+    private static readonly string[] FilterPatterns =
+    [
+        "*doubleclick.net*",
+        "*googlesyndication.com*",
+        "*googleadservices.com*",
+        "*adservice.google.*",
+        "*2mdn.net*",
+        "*innovid.com*",
+        "*/api/stats/ads*",
+        "*/pagead/*",
+        "*/ptracking?*",
+        "*ad.youtube.com*",
+        "*ads.youtube.com*"
+    ];
+
     private static readonly string[] BlockedUrlSubstrings =
     [
         "doubleclick.net",
@@ -38,7 +53,12 @@ public sealed class AdBlockService
             await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
         }
 
-        webView.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+        // Register targeted ad filters instead of universal '*' to eliminate IPC UI thread bottlenecks
+        foreach (string filter in FilterPatterns)
+        {
+            webView.AddWebResourceRequestedFilter(filter, CoreWebView2WebResourceContext.All);
+        }
+
         webView.WebResourceRequested += OnWebResourceRequested;
         webView.DOMContentLoaded += async (_, _) =>
         {
@@ -72,7 +92,7 @@ public sealed class AdBlockService
         if (IsAdRequest(uri))
         {
             e.Response = webView.Environment.CreateWebResourceResponse(
-                Stream.Null,
+                new MemoryStream(Array.Empty<byte>()),
                 204,
                 "No Content",
                 "Access-Control-Allow-Origin: https://music.youtube.com");

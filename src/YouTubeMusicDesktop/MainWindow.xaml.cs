@@ -1,12 +1,14 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Microsoft.Web.WebView2.Core;
 using YouTubeMusicDesktop.Interop;
@@ -56,7 +58,9 @@ public partial class MainWindow : Window
     private readonly AppSettingsService _settingsService = new();
     private readonly SystemTrayService _systemTrayService;
     private readonly DynamicIslandWindow _dynamicIsland;
+    private readonly DispatcherTimer _settingsSaveDebounceTimer;
     private string _currentDocumentTitle = "YouTube Music";
+    private WindowState _lastWindowState = WindowState.Maximized;
     private bool _isSettingsOpen;
     private bool _isSyncingSettingsUi;
     private bool _isExplicitExit;
@@ -75,9 +79,23 @@ public partial class MainWindow : Window
             restoreMainWindowAction: () => Dispatcher.Invoke(RestoreFromTray),
             executeMediaCommandAsync: ExecutePlayerCommandAsync);
 
+        _settingsSaveDebounceTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _settingsSaveDebounceTimer.Tick += (_, _) =>
+        {
+            _settingsSaveDebounceTimer.Stop();
+            _settingsService.Save(_settingsService.Current);
+        };
+
+        string appVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+        AboutVersionText.Text = $"v{appVersion}";
+
         SyncSettingsUiFromModel(_settingsService.Current);
         UpdateHeaderIndicators(_settingsService.Current);
         UpdateTitleBarStateVisuals();
+        _lastWindowState = WindowState;
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -121,6 +139,11 @@ public partial class MainWindow : Window
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
         UpdateTitleBarStateVisuals();
+
+        if (WindowState != WindowState.Minimized)
+        {
+            _lastWindowState = WindowState;
+        }
 
         if (WindowState == WindowState.Minimized)
         {
@@ -171,10 +194,12 @@ public partial class MainWindow : Window
         SettingsOverlayGrid.Visibility = Visibility.Visible;
         Title = "Settings • YouTube Music";
         SwitchSettingsTab(0);
+        SettingsOverlayGrid.Focus();
     }
 
     public void CloseSettings()
     {
+        FlushPendingSettingsSave();
         _isSettingsOpen = false;
         SettingsOverlayGrid.Visibility = Visibility.Collapsed;
         MusicWebView.Visibility = Visibility.Visible;
@@ -213,9 +238,9 @@ public partial class MainWindow : Window
         CloseSettings();
     }
 
-    private void OnNavDolbyClick(object sender, MouseButtonEventArgs e) => SwitchSettingsTab(0);
-    private void OnNavIslandClick(object sender, MouseButtonEventArgs e) => SwitchSettingsTab(1);
-    private void OnNavAboutClick(object sender, MouseButtonEventArgs e) => SwitchSettingsTab(2);
+    private void OnNavDolbyClick(object sender, RoutedEventArgs e) => SwitchSettingsTab(0);
+    private void OnNavIslandClick(object sender, RoutedEventArgs e) => SwitchSettingsTab(1);
+    private void OnNavAboutClick(object sender, RoutedEventArgs e) => SwitchSettingsTab(2);
 
     private void SwitchSettingsTab(int index)
     {
@@ -256,7 +281,7 @@ public partial class MainWindow : Window
             LaptopIconPath.Stroke = isLaptop ? IconActiveBrush : IconInactiveBrush;
 
             // 3. Preset Buttons
-            UpdatePresetPillSelection(settings.DolbyPreset);
+            UpdatePresetPillSelection(settings);
 
             // 4. Sliders
             SurroundSlider.Value = Math.Clamp(settings.SurroundLevel, 0, 100);
@@ -272,6 +297,10 @@ public partial class MainWindow : Window
             IslandToggleThumb.HorizontalAlignment = settings.DynamicIslandEnabled
                 ? System.Windows.HorizontalAlignment.Right
                 : System.Windows.HorizontalAlignment.Left;
+
+            // 6. Dolby Master Dependent Controls (Sliders disabled & grayed out when Dolby is off)
+            DspSlidersContainer.IsEnabled = settings.DolbyEnabled;
+            DspSlidersContainer.Opacity = settings.DolbyEnabled ? 1.0 : 0.38;
         }
         finally
         {
@@ -279,13 +308,24 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdatePresetPillSelection(string activePreset)
+    private void UpdatePresetPillSelection(AppSettings settings)
     {
-        SetPillState(PresetMusicBtn, string.Equals(activePreset, "Music", StringComparison.OrdinalIgnoreCase));
-        SetPillState(PresetCinemaBtn, string.Equals(activePreset, "Cinema", StringComparison.OrdinalIgnoreCase));
-        SetPillState(PresetBassBtn, string.Equals(activePreset, "BassBoost", StringComparison.OrdinalIgnoreCase));
-        SetPillState(PresetVocalBtn, string.Equals(activePreset, "Vocal", StringComparison.OrdinalIgnoreCase));
-        SetPillState(PresetDynamicBtn, string.Equals(activePreset, "Dynamic", StringComparison.OrdinalIgnoreCase));
+        bool isMusic = string.Equals(settings.DolbyPreset, "Music", StringComparison.OrdinalIgnoreCase)
+            && settings.SurroundLevel == 70 && settings.BassLevel == 68 && settings.ClarityLevel == 65;
+        bool isCinema = string.Equals(settings.DolbyPreset, "Cinema", StringComparison.OrdinalIgnoreCase)
+            && settings.SurroundLevel == 92 && settings.BassLevel == 75 && settings.ClarityLevel == 72;
+        bool isBass = string.Equals(settings.DolbyPreset, "BassBoost", StringComparison.OrdinalIgnoreCase)
+            && settings.SurroundLevel == 65 && settings.BassLevel == 92 && settings.ClarityLevel == 58;
+        bool isVocal = string.Equals(settings.DolbyPreset, "Vocal", StringComparison.OrdinalIgnoreCase)
+            && settings.SurroundLevel == 55 && settings.BassLevel == 42 && settings.ClarityLevel == 90;
+        bool isDynamic = string.Equals(settings.DolbyPreset, "Dynamic", StringComparison.OrdinalIgnoreCase)
+            && settings.SurroundLevel == 78 && settings.BassLevel == 72 && settings.ClarityLevel == 75;
+
+        SetPillState(PresetMusicBtn, isMusic);
+        SetPillState(PresetCinemaBtn, isCinema);
+        SetPillState(PresetBassBtn, isBass);
+        SetPillState(PresetVocalBtn, isVocal);
+        SetPillState(PresetDynamicBtn, isDynamic);
     }
 
     private static void SetPillState(Button btn, bool isSelected)
@@ -297,6 +337,8 @@ public partial class MainWindow : Window
 
     private void SaveAndApplySettings(AppSettings updated)
     {
+        _settingsSaveDebounceTimer.Stop();
+        _isAudioPushScheduled = false;
         _settingsService.Save(updated);
         SyncSettingsUiFromModel(updated);
         UpdateHeaderIndicators(updated);
@@ -313,14 +355,58 @@ public partial class MainWindow : Window
         _ = PushAudioSettingsToWebViewAsync();
     }
 
-    private void OnDolbyMasterToggleClick(object sender, MouseButtonEventArgs e)
+    private void ScheduleSettingsSave()
+    {
+        _settingsSaveDebounceTimer.Stop();
+        _settingsSaveDebounceTimer.Start();
+    }
+
+    private void FlushPendingSettingsSave()
+    {
+        if (_settingsSaveDebounceTimer.IsEnabled)
+        {
+            _settingsSaveDebounceTimer.Stop();
+            _settingsService.Save(_settingsService.Current);
+        }
+    }
+
+    private long _lastAudioPushTimestamp;
+    private bool _isAudioPushScheduled;
+
+    private async Task ThrottledPushAudioSettingsToWebViewAsync()
+    {
+        long now = Stopwatch.GetTimestamp();
+        double elapsedMs = (now - _lastAudioPushTimestamp) * 1000.0 / Stopwatch.Frequency;
+
+        if (elapsedMs >= 32)
+        {
+            _lastAudioPushTimestamp = now;
+            await PushAudioSettingsToWebViewAsync();
+        }
+        else if (!_isAudioPushScheduled)
+        {
+            _isAudioPushScheduled = true;
+            int delayMs = (int)Math.Max(1, 32 - elapsedMs);
+            _ = Task.Delay(delayMs).ContinueWith(_ =>
+            {
+                Dispatcher.InvokeAsync(async () =>
+                {
+                    _isAudioPushScheduled = false;
+                    _lastAudioPushTimestamp = Stopwatch.GetTimestamp();
+                    await PushAudioSettingsToWebViewAsync();
+                });
+            });
+        }
+    }
+
+    private void OnDolbyMasterToggleClick(object sender, RoutedEventArgs e)
     {
         AppSettings next = _settingsService.Current.Clone();
         next.DolbyEnabled = !next.DolbyEnabled;
         SaveAndApplySettings(next);
     }
 
-    private void OnDeviceHeadphonesClick(object sender, MouseButtonEventArgs e)
+    private void OnDeviceHeadphonesClick(object sender, RoutedEventArgs e)
     {
         AppSettings next = _settingsService.Current.Clone();
         next.DolbyDeviceMode = "Headphones";
@@ -328,7 +414,7 @@ public partial class MainWindow : Window
         SaveAndApplySettings(next);
     }
 
-    private void OnDeviceLaptopClick(object sender, MouseButtonEventArgs e)
+    private void OnDeviceLaptopClick(object sender, RoutedEventArgs e)
     {
         AppSettings next = _settingsService.Current.Clone();
         next.DolbyDeviceMode = "LaptopSpeakers";
@@ -368,15 +454,17 @@ public partial class MainWindow : Window
         BassValueText.Text = $"{b}%";
         ClarityValueText.Text = $"{c}%";
 
-        AppSettings next = _settingsService.Current.Clone();
-        next.SurroundLevel = s;
-        next.BassLevel = b;
-        next.ClarityLevel = c;
-        _settingsService.Save(next);
-        _ = PushAudioSettingsToWebViewAsync();
+        // Keep DolbyPreset intact (so acoustic models like Cinema 3D soundstage don't collapse)
+        _settingsService.Current.SurroundLevel = s;
+        _settingsService.Current.BassLevel = b;
+        _settingsService.Current.ClarityLevel = c;
+        UpdatePresetPillSelection(_settingsService.Current);
+
+        _ = ThrottledPushAudioSettingsToWebViewAsync();
+        ScheduleSettingsSave();
     }
 
-    private void OnIslandMasterToggleClick(object sender, MouseButtonEventArgs e)
+    private void OnIslandMasterToggleClick(object sender, RoutedEventArgs e)
     {
         AppSettings next = _settingsService.Current.Clone();
         next.DynamicIslandEnabled = !next.DynamicIslandEnabled;
@@ -625,14 +713,13 @@ public partial class MainWindow : Window
         Show();
         if (WindowState == WindowState.Minimized)
         {
-            WindowState = WindowState.Maximized;
+            WindowState = _lastWindowState;
         }
 
         Activate();
         IntPtr hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd != IntPtr.Zero)
         {
-            NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
             NativeMethods.SetForegroundWindow(hwnd);
         }
         if (!_isSettingsOpen)
@@ -643,15 +730,17 @@ public partial class MainWindow : Window
 
     public void AllowSessionEndingClose()
     {
+        FlushPendingSettingsSave();
         _isExplicitExit = true;
-        _dynamicIsland.Close();
+        _dynamicIsland.SafeClose();
         _systemTrayService.Dispose();
     }
 
     private void ExitApplication()
     {
+        FlushPendingSettingsSave();
         _isExplicitExit = true;
-        _dynamicIsland.Close();
+        _dynamicIsland.SafeClose();
         _systemTrayService.Dispose();
         Close();
         Application.Current.Shutdown();
@@ -659,6 +748,8 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        FlushPendingSettingsSave();
+
         if (!_isExplicitExit)
         {
             // Keep music playing in background via System Tray & show Dynamic Island (if enabled) when user clicks 'X'
@@ -678,7 +769,7 @@ public partial class MainWindow : Window
         }
 
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
-        _dynamicIsland.Close();
+        _dynamicIsland.SafeClose();
         _systemTrayService.Dispose();
         base.OnClosing(e);
     }

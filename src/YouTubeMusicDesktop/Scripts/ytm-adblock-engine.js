@@ -427,6 +427,13 @@
         clarityLevel: 60
     };
 
+    const onVideoPlayOrResume = () => {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => { });
+        }
+        updateDolbyDspParameters();
+    };
+
     // Helper: Generate gentle tanh soft-saturation curve for WaveShaper (anti-clipping limiter & exciter)
     function generateSoftSaturationCurve(samples = 1024, drive = 1.0) {
         const curve = new Float32Array(samples);
@@ -494,7 +501,26 @@
             }
 
             if (connectedVideo !== video || !dspNodes) {
-                const source = audioCtx.createMediaElementSource(video);
+                if (connectedVideo && connectedVideo !== video) {
+                    try {
+                        connectedVideo.removeEventListener('play', onVideoPlayOrResume);
+                        connectedVideo.removeEventListener('playing', onVideoPlayOrResume);
+                        connectedVideo.removeEventListener('loadeddata', onVideoPlayOrResume);
+                    } catch (_) { }
+                }
+
+                if (dspNodes) {
+                    try {
+                        dspNodes.dryGain.disconnect();
+                        dspNodes.wetGain.disconnect();
+                    } catch (_) { }
+                    dspNodes = null;
+                }
+
+                if (!video.__ytmAudioSourceNode) {
+                    video.__ytmAudioSourceNode = audioCtx.createMediaElementSource(video);
+                }
+                const source = video.__ytmAudioSourceNode;
 
                 // --- DRY PATH (Pure Bit-Perfect Bypass) ---
                 const dryGain = audioCtx.createGain();
@@ -722,19 +748,12 @@
                 };
 
                 // Bind playback lifecycle hooks directly to the video element
-                const onPlayOrResume = () => {
-                    if (audioCtx && audioCtx.state === 'suspended') {
-                        audioCtx.resume().catch(() => { });
-                    }
-                    updateDolbyDspParameters();
-                };
-
-                video.removeEventListener('play', onPlayOrResume);
-                video.removeEventListener('playing', onPlayOrResume);
-                video.removeEventListener('loadeddata', onPlayOrResume);
-                video.addEventListener('play', onPlayOrResume);
-                video.addEventListener('playing', onPlayOrResume);
-                video.addEventListener('loadeddata', onPlayOrResume);
+                video.removeEventListener('play', onVideoPlayOrResume);
+                video.removeEventListener('playing', onVideoPlayOrResume);
+                video.removeEventListener('loadeddata', onVideoPlayOrResume);
+                video.addEventListener('play', onVideoPlayOrResume);
+                video.addEventListener('playing', onVideoPlayOrResume);
+                video.addEventListener('loadeddata', onVideoPlayOrResume);
             }
 
             return true;
@@ -906,6 +925,21 @@
 
     window.__ytmDesktopControl = {
         playPause: function () {
+            const player = document.getElementById('movie_player');
+            if (player && typeof player.getPlayerState === 'function') {
+                const state = player.getPlayerState();
+                // 1 = playing, 2 = paused
+                if (state === 1 && typeof player.pauseVideo === 'function') {
+                    player.pauseVideo();
+                    setTimeout(emitMediaState, 60);
+                    return;
+                } else if (state === 2 && typeof player.playVideo === 'function') {
+                    player.playVideo();
+                    setTimeout(emitMediaState, 60);
+                    return;
+                }
+            }
+
             const btn = document.querySelector('#play-pause-button, ytmusic-player-bar #play-pause-button');
             if (btn) {
                 btn.click();
@@ -920,6 +954,12 @@
             }
         },
         next: function () {
+            const player = document.getElementById('movie_player');
+            if (player && typeof player.nextVideo === 'function') {
+                player.nextVideo();
+                setTimeout(emitMediaState, 120);
+                return;
+            }
             const btn = document.querySelector('.next-button, ytmusic-player-bar .next-button');
             if (btn) {
                 btn.click();
@@ -927,6 +967,12 @@
             }
         },
         previous: function () {
+            const player = document.getElementById('movie_player');
+            if (player && typeof player.previousVideo === 'function') {
+                player.previousVideo();
+                setTimeout(emitMediaState, 120);
+                return;
+            }
             const btn = document.querySelector('.previous-button, ytmusic-player-bar .previous-button');
             if (btn) {
                 btn.click();
@@ -934,11 +980,21 @@
             }
         },
         seekTo: function (fraction) {
+            const player = document.getElementById('movie_player');
             const video = document.querySelector('video.html5-main-video, video.video-stream');
-            if (video && Number.isFinite(video.duration) && video.duration > 0) {
+            const duration = (player && typeof player.getDuration === 'function' && Number.isFinite(player.getDuration()) && player.getDuration() > 0)
+                ? player.getDuration()
+                : (video && Number.isFinite(video.duration) ? video.duration : 0);
+
+            if (duration > 0) {
                 const clamped = Math.max(0, Math.min(1, Number(fraction) || 0));
-                video.currentTime = video.duration * clamped;
-                setTimeout(emitMediaState, 50);
+                const targetSeconds = duration * clamped;
+                if (player && typeof player.seekTo === 'function') {
+                    player.seekTo(targetSeconds, true);
+                } else if (video) {
+                    video.currentTime = targetSeconds;
+                }
+                setTimeout(emitMediaState, 60);
             }
         },
         applyAudioSettings: function (settings) {

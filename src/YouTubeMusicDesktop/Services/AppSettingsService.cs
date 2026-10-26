@@ -36,6 +36,7 @@ public sealed class AppSettingsService
                 AppSettings? loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
                 if (loaded is not null)
                 {
+                    loaded.Normalize();
                     Current = loaded;
                     return Current;
                 }
@@ -47,16 +48,20 @@ public sealed class AppSettingsService
         }
 
         Current = new AppSettings();
+        Current.Normalize();
         return Current;
     }
 
     public void Save(AppSettings settings)
     {
         Current = settings.Clone();
+        Current.Normalize();
         try
         {
             string json = JsonSerializer.Serialize(Current, JsonOptions);
-            File.WriteAllText(_settingsFilePath, json);
+            string tempPath = _settingsFilePath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _settingsFilePath, overwrite: true);
         }
         catch
         {
